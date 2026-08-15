@@ -1,0 +1,137 @@
+:root {
+  --teal: #006D77; /* theme color (Southern Resident teal) */
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, sans-serif; }
+
+.topnav {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background: var(--teal);
+}
+.topnav a { color: #fff; text-decoration: none; }
+.topnav .brand { font-weight: 700; margin-right: auto; }
+
+.page { padding: 1rem; max-width: 60rem; margin: 0 auto; }
+
+/* --- Map view --- */
+.map-view { position: relative; height: calc(100vh - 2.4rem); }
+.map-container { height: 100%; }
+
+.filter-panel {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  padding: 0.6rem 0.75rem;
+  font-size: 0.8rem;
+  max-width: 15rem;
+}
+.fp-dates { display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 0.5rem; }
+.fp-dates label { display: flex; justify-content: space-between; gap: 0.5rem; align-items: center; }
+.fp-species { display: flex; flex-direction: column; gap: 0.15rem; }
+.fp-check { display: flex; align-items: center; gap: 0.4rem; cursor: pointer; }
+.fp-dot { width: 0.7rem; height: 0.7rem; border-radius: 50%; display: inline-block; }
+
+.map-status {
+  position: absolute;
+  bottom: 1.75rem;
+  left: 0.75rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  padding: 0.25rem 0.6rem;
+  font-size: 0.8rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.demo-badge {
+  background: #E9C46A;
+  border-radius: 4px;
+  padding: 0 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+/* --- Admin --- */
+.admin { max-width: 72rem; }
+.admin-gate { display: flex; gap: 0.5rem; max-width: 26rem; }
+.admin-gate input { flex: 1; }
+.admin-error { color: #b00020; }
+.admin-tabs { display: flex; gap: 0.25rem; border-bottom: 2px solid var(--teal); margin-bottom: 1rem; }
+.admin-tabs button { border: none; background: none; padding: 0.5rem 0.9rem; cursor: pointer; font-size: 0.9rem; }
+.admin-tabs button.active { background: var(--teal); color: #fff; }
+.admin-tabs .admin-signout { margin-left: auto; color: #777; }
+.admin-hint { color: #666; font-size: 0.85rem; }
+.admin input, .admin select, .admin textarea, .admin button { font: inherit; }
+.admin input, .admin select, .admin textarea { border: 1px solid #ccc; border-radius: 4px; padding: 0.3rem 0.45rem; }
+.admin button { border: 1px solid var(--teal); background: var(--teal); color: #fff; border-radius: 4px; padding: 0.35rem 0.8rem; cursor: pointer; }
+.admin button:disabled { opacity: 0.5; cursor: default; }
+.admin button.danger { background: #fff; color: #b00020; border-color: #b00020; }
+
+.ingest-title { width: 100%; margin-bottom: 0.5rem; }
+.ingest-text { width: 100%; font-family: ui-monospace, monospace; font-size: 0.8rem; }
+.ingest-actions { display: flex; align-items: center; gap: 0.75rem; margin: 0.5rem 0 1.5rem; }
+.ingest-status.ok { color: #1b7f3b; }
+.ingest-status.err { color: #b00020; }
+
+.admin-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-bottom: 1.5rem; }
+.admin-table th { text-align: left; border-bottom: 2px solid #ddd; padding: 0.3rem 0.4rem; }
+.admin-table td { border-bottom: 1px solid #eee; padding: 0.25rem 0.4rem; vertical-align: middle; }
+.admin-table td.raw { max-width: 18rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-table td.notes { color: #888; font-size: 0.75rem; max-width: 16rem; }
+.admin-table input { width: 100%; min-width: 5rem; }
+.admin-table input.coord { min-width: 5.5rem; width: 6.5rem; }
+.admin-table .row-actions { display: flex; gap: 0.3rem; white-space: nowrap; }
+.status-complete { color: #1b7f3b; }
+.status-failed { color: #b00020; }
+.status-processing { color: #b8860b; }
+
+.review { display: grid; grid-template-columns: minmax(16rem, 24rem) 1fr; gap: 1.5rem; align-items: start; }
+.review-list { max-height: 75vh; overflow-y: auto; display: flex; flex-direction: column; gap: 0.3rem; }
+.review-item { text-align: left; background: #fff; color: #222; border: 1px solid #ddd; display: flex; flex-direction: column; gap: 0.1rem; }
+.review-item.active { border-color: var(--teal); background: #e6f2f3; }
+.review-item .ri-loc { font-weight: 600; font-size: 0.85rem; }
+.review-item .ri-meta { color: #777; font-size: 0.75rem; }
+.review-excerpt { margin: 0 0 0.75rem; padding: 0.5rem 0.75rem; background: #f6f6f6; border-left: 3px solid var(--teal); font-size: 0.85rem; white-space: pre-wrap; }
+.review-fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem 1rem; margin-bottom: 0.5rem; }
+.review-fields label { display: flex; flex-direction: column; font-size: 0.8rem; color: #555; }
+.review-hint { color: #666; font-size: 0.8rem; margin: 0.25rem 0; }
+.mini-map { height: 300px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 0.75rem; }
+.review-actions { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.review-catalog { display: flex; gap: 0.4rem; }
+.review-msg { color: #444; font-size: 0.85rem; }
+
+@media (max-width: 900px) {
+  .review { grid-template-columns: 1fr; }
+}
+
+/* --- Sighting popup --- */
+.sighting-popup { font-size: 0.8rem; line-height: 1.35; }
+.sighting-popup .sp-species { font-weight: 700; font-size: 0.85rem; }
+.sighting-popup .sp-who { color: #333; font-weight: 600; }
+.sighting-popup .sp-when { color: #555; }
+.sighting-popup .sp-where { margin-top: 0.15rem; }
+.sighting-popup .sp-doing { color: #555; font-style: italic; }
+.sighting-popup .sp-summary { margin-top: 0.25rem; }
+.sighting-popup .sp-reporter { margin-top: 0.25rem; color: #777; font-size: 0.72rem; }
+.sp-badge {
+  display: inline-block;
+  border-radius: 4px;
+  padding: 0 0.3rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  background: #e0e0e0;
+  color: #444;
+  vertical-align: middle;
+}
+.sp-badge-gps { background: #c8e6c9; }
+.sp-badge-catalog { background: #b2dfdb; }
+.sp-badge-ai { background: #ffe0b2; }
+.sp-badge-manual { background: #d1c4e9; }

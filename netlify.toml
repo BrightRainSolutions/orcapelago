@@ -1,0 +1,60 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# --- API routes -> functions (specific before general) ---
+
+[[redirects]]
+  from = "/api/ingest"
+  to = "/.netlify/functions/ingest-newsletter-background"
+  status = 200
+
+[[redirects]]
+  from = "/api/ingest-status"
+  to = "/.netlify/functions/get-ingest-status"
+  status = 200
+
+[[redirects]]
+  from = "/api/sightings/:id"
+  to = "/.netlify/functions/sightings-admin/:id"
+  status = 200
+
+[[redirects]]
+  from = "/api/sightings"
+  to = "/.netlify/functions/get-sightings"
+  status = 200
+
+[[redirects]]
+  from = "/api/newsletters"
+  to = "/.netlify/functions/get-newsletters"
+  status = 200
+
+[[redirects]]
+  from = "/api/gazetteer/*"
+  to = "/.netlify/functions/gazetteer/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/api/gazetteer"
+  to = "/.netlify/functions/gazetteer"
+  status = 200
+
+[[redirects]]
+  from = "/api/geocode-candidates/*"
+  to = "/.netlify/functions/geocode-candidates/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/api/geocode-candidates"
+  to = "/.netlify/functions/geocode-candidates"
+  status = 200
+
+# SPA fallback
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
