@@ -68,6 +68,46 @@ describe('bannerFor', () => {
     expect(bannerFor('ANNOUNCEMENTS:')).toBeNull();
     expect(bannerFor('We saw gray whales today')).toBeNull();
   });
+  it('matches the banners the July 29, 2026 issue introduced', () => {
+    expect(bannerFor('NORTHERN RESIDENT KILLER WHALES')).toMatchObject({
+      species: 'northern_resident'
+    });
+    expect(bannerFor('DOLPHINS')).toMatchObject({ species: 'other' });
+  });
+});
+
+// An unrecognised banner is silent data corruption: its sightings are absorbed
+// into the preceding section and stored under the wrong species. The detection
+// heuristic is deliberately narrow — it must fire on a real one without
+// crying wolf on the navigation boilerplate every issue contains.
+describe('unrecognised section banner detection', () => {
+  const build = (body) => `July 29, 2026\n\n${body}\n`;
+  const GRAY = 'GRAY WHALES\n\nThu, Jul 9 - Puget Sound\n\n10:00 - A gray whale.\n';
+
+  it('stays silent on the canonical fixture', () => {
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('warns when an unknown ALL-CAPS line owns date headers', () => {
+    const r = preprocessNewsletter(build(
+      `${GRAY}\nPORPOISES\n\nFri, Jul 10 - Haro Strait\n\n11:00 - Some porpoises.\n`
+    ));
+    expect(r.warnings.join(' ')).toContain('PORPOISES');
+  });
+
+  it('ignores boilerplate sitting just above a recognised banner', () => {
+    const r = preprocessNewsletter(build(
+      `DONATE HERE\n\nVISIT OUR WEBSITE\n\n${GRAY}`
+    ));
+    expect(r.warnings).toEqual([]);
+  });
+
+  it('ignores whale ID lines, which are ALL-CAPS but carry digits', () => {
+    const r = preprocessNewsletter(build(
+      `${GRAY}\nCRC2687\n\nFri, Jul 10 - Saratoga Passage\n\n11:00 - Another.\n`
+    ));
+    expect(r.warnings).toEqual([]);
+  });
 });
 
 describe('preprocessNewsletter (fixture)', () => {

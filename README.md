@@ -72,16 +72,22 @@ identical code path.
    node scripts/dry-run.mjs docs/sightings-newsletters/2026-07-29-whale-sighting-report.txt
    ```
 
-   Check three things: the date parsed; every species section you expect
-   appears under BANNERS RECOGNISED; and nothing under UNRECOGNISED ALL-CAPS
-   LINES names a species.
+   It **exits non-zero** if the ingest would abort (no publication date, no
+   sections) *or* would appear to succeed while misfiling sightings. Confirm
+   the date parsed and that every species section you expect shows under
+   BANNERS RECOGNISED.
 
-   That third check matters most. An unrecognised banner raises no error — its
-   sightings are swallowed into the *preceding* section and extracted under the
-   wrong species. Add new banners to `SPECIES_BANNERS` in `lib/preprocess.js`.
-   A genuinely new species also needs a key in `SPECIES_KEYS` (`lib/extract.js`),
-   the allowed list in `lib/prompts.js`, and a label + colour in
-   `src/map/species.js`.
+   The misfiling case is the one to respect. An unrecognised ALL-CAPS banner
+   raises no error during ingest — its sightings are swallowed into the
+   *preceding* section and stored under the wrong species, so you get rows that
+   are present but wrong. Add new banners to `SPECIES_BANNERS` in
+   `lib/preprocess.js`. A genuinely new species also needs a key in
+   `SPECIES_KEYS` (`lib/extract.js`), the allowed list in `lib/prompts.js`, and
+   a label + colour in `src/map/species.js`.
+
+   Ingest carries the same guard: unrecognised banners and any species the
+   model returns outside the vocabulary both land in the newsletter's
+   `error_message`, visible in the admin Notes column.
 
 4. **Ingest**:
 

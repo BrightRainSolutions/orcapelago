@@ -14,7 +14,8 @@
 //
 //   node scripts/dry-run.mjs docs/sightings-newsletters/2026-07-29-whale-sighting-report.txt
 //
-// Exit 1 if the newsletter cannot be ingested at all (no date, no sections).
+// Exit 1 if the newsletter would abort (no date, no sections) OR would ingest
+// "successfully" while misfiling sightings under the wrong species.
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
@@ -59,8 +60,21 @@ for (const [name] of SPECIES_BANNERS) {
   console.log(`  ${found.has(name) ? '✓' : '·'} ${name}`);
 }
 
-// ALL-CAPS lines that matched no banner. Most are navigation/boilerplate, but
-// a species name appearing here means that section is being misfiled.
+// The preprocessor's own verdict — the authoritative signal. It flags an
+// ALL-CAPS line only when date headers follow it, i.e. when it is actually
+// behaving like a section start. These same warnings land in the newsletter's
+// error_message during a real ingest.
+rule();
+if (r.warnings.length) {
+  console.log('*** PREPROCESSOR WARNINGS ***');
+  r.warnings.forEach((w) => console.log('  ! ' + w));
+} else {
+  console.log('✓ no preprocessor warnings');
+}
+
+// Informational: every unrecognised ALL-CAPS line, section-like or not. Most
+// are navigation. Skim it in case something reads like a species that the
+// lookahead test missed.
 const suspects = [...new Set(
   lines
     .map((l) => l.trim())
@@ -69,14 +83,10 @@ const suspects = [...new Set(
       l === l.toUpperCase() && /[A-Z]{3}/.test(l) &&
       !bannerFor(l) && !/^(SUMMARY|ANNOUNCEMENTS)/i.test(l))
 )];
-rule();
 if (suspects.length) {
-  console.log('⚠ UNRECOGNISED ALL-CAPS LINES');
-  console.log('  Most will be navigation/boilerplate. If any names a species,');
-  console.log('  add it to SPECIES_BANNERS in lib/preprocess.js before ingesting:');
+  console.log('');
+  console.log('unrecognised ALL-CAPS lines (informational — usually navigation):');
   suspects.slice(0, 25).forEach((s) => console.log('   ', JSON.stringify(s)));
-} else {
-  console.log('✓ no unrecognised ALL-CAPS lines');
 }
 
 // Per-chunk detail. A chunk with no headers, timestamps or separators is very
@@ -105,7 +115,14 @@ console.log('chars sent to API  ', sent, `(${Math.round((sent / raw.length) * 10
 console.log('likely wasted calls', barrenCount);
 rule('=');
 
+// Exit non-zero for both hard failures and silent-corruption risks. A
+// misfiled species section is arguably worse than an abort: the ingest
+// "succeeds" and writes rows under the wrong species.
 if (!r.newsletterDate || !r.chunks.length) {
   console.error('\nFAIL: ingest would abort — fix the above before running run-ingest.mjs');
+  process.exit(1);
+}
+if (r.warnings.length) {
+  console.error('\nFAIL: ingest would silently misfile sightings — resolve the warnings above');
   process.exit(1);
 }

@@ -44,10 +44,12 @@ export default async (req) => {
   const log = (msg) => console.log(`[ingest ${id} ${at()}] ${msg}`);
 
   try {
-    const { title, newsletterDate, dateRange, chunks } = preprocessNewsletter(text);
+    const { title, newsletterDate, dateRange, chunks, warnings: preWarnings } =
+      preprocessNewsletter(text);
     if (!chunks.length) throw new Error('Preprocessing found no species sections — is this a whale sighting report?');
     if (!newsletterDate) throw new Error('Could not find the newsletter publication date in the text');
     log(`preprocessed: ${chunks.length} chunks, newsletter date ${newsletterDate}`);
+    for (const w of preWarnings) log(`WARNING: ${w}`);
 
     const anthropic = new Anthropic();
     const { sightings, warnings: extractWarnings } = await extractSightings(
@@ -81,7 +83,7 @@ export default async (req) => {
            ${s.summary}, ${s.raw_excerpt}, ${s.reporter}, ${s.report_kind})`;
     }
 
-    const warnings = [...extractWarnings, ...geoWarnings];
+    const warnings = [...preWarnings, ...extractWarnings, ...geoWarnings];
     await sql`
       update newsletters set
         status = 'complete',
