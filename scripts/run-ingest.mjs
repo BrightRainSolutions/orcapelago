@@ -1,7 +1,7 @@
 // Run a real ingest locally by invoking the background function handler
 // directly — same code path as production (auth check, preprocess, extract,
 // geocode, persist), useful for backfilling newsletters without the UI.
-//   node scripts/run-ingest.mjs docs/sample-newsletters/2026-07-15-whale-sighting-report.txt
+//   node scripts/run-ingest.mjs docs/sightings-newsletters/2026-07-15-whale-sighting-report.txt
 import { readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';

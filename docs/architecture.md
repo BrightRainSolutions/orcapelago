@@ -92,6 +92,29 @@ Why a background function at all: extraction over a full newsletter takes
 minutes, far past the 10s ceiling on a regular function. Background functions
 return 202 and run up to 15 minutes.
 
+### Update 2026-08-16 — ingest moved to the CLI
+
+A real newsletter exceeds that 15-minute ceiling. A July 29 run passed 22
+minutes still inside extraction, and eventually hung outright. The failure mode
+when the platform kills a background function is worse than slow: the process
+dies *outside* the `catch`, so `status='failed'` is never written. The row sits
+at `processing` forever and `IngestPanel` — which polls every 5s with no
+timeout — spins indefinitely showing no error.
+
+Ingest therefore runs through `scripts/run-ingest.mjs`, which has no ceiling and
+executes the identical code path (same auth check, preprocess, extract, geocode,
+persist). The paste box still works and is left in place, but is not the
+supported path for a full newsletter. The review queue and catalog are ordinary
+fast functions and are unaffected — they stay in the browser.
+
+This also retires the two constraints that shaped the ingest API: the
+`-background` suffix and the client-generated UUID both exist only to serve a
+deployed paste box. They're harmless where they are, but nothing depends on
+them anymore.
+
+**Always dry-run first:** `node scripts/dry-run.mjs <file>` is pure and free,
+and catches the silent failure described in §3 stage 1. See the README runbook.
+
 ---
 
 ## 3. The ingest pipeline
@@ -124,6 +147,23 @@ merely the lever.
 them until the next header. If a section is split mid-way, chunk 2+ loses the
 date and water body it inherits — so the header is passed forward explicitly and
 injected into the prompt as "this text is a continuation under…".
+
+**The sharpest failure mode in the whole pipeline: an unrecognised banner.**
+Sections are delimited by ALL-CAPS species banners matched against
+`SPECIES_BANNERS`. A banner that isn't in that list is not seen as a section
+start — so its content is swallowed into the *preceding* section and extracted
+under that section's species. Nothing errors. Nothing warns. You get rows that
+are present but wrong, which is far harder to notice than rows that are missing.
+
+This was live: the July 29, 2026 issue introduced `NORTHERN RESIDENT KILLER
+WHALES` and `DOLPHINS`. The dolphin section — 3,406 characters across 5 date
+headers — was being handed to Claude under the `UNIDENTIFIED BALEEN WHALES`
+banner and would have been stored as `unidentified_baleen`. Adding a species
+means four coordinated edits: `SPECIES_BANNERS` here, `SPECIES_KEYS` in
+`extract.js`, the allowed list in `prompts.js`, and label/colour in
+`src/map/species.js`. No migration — `species` is free text.
+
+`scripts/dry-run.mjs` exists specifically to surface this before an ingest.
 
 ### Stage 2 · Extract — `lib/extract.js`
 
@@ -436,16 +476,23 @@ database, not just written:
 | `gazetteer` | 11 (10 seeded + 1 promoted) |
 
 The pipeline has run end to end against the canonical fixture
-(`docs/sample-newsletters/2026-07-15-whale-sighting-report.txt`). The 346
+(`docs/sightings-newsletters/2026-07-15-whale-sighting-report.txt`). The 346
 candidates against 394 sightings reflect the intended cold start — 11 catalog
 entries can't match much — and the review queue is now the bottleneck.
 
+Since then: the sightings table view is built (with row → map deep linking via
+`/?sighting=<id>`), ingest logs every phase with elapsed time, `scripts/dry-run.mjs`
+pre-flights newsletters, and `northern_resident` was added as a species. The
+repo is on GitHub at `BrightRainSolutions/orcapelago` (private).
+
 **Remaining:**
 
-- Step 8 — `AboutView.vue` and `SightingsView.vue` are stubs (headings only).
-  About carries the Orca Network attribution and donate link that spec §1 treats
-  as non-negotiable, so it blocks any public deploy. PWA icons missing.
-- Step 9 — deploy. Nothing exists on Netlify; there is no git remote. It runs
-  locally via `netlify dev` only.
-- Work the candidate queue by `hit_count` via `CatalogPanel`, which backfills in
-  bulk.
+- Step 8 — `AboutView.vue` is still a stub. It carries the Orca Network
+  attribution and donate link that spec §1 treats as non-negotiable, so it
+  blocks any public deploy. PWA icons (`/icons/icon-192.png`, `icon-512.png`)
+  don't exist.
+- Step 9 — deploy. Nothing exists on Netlify yet.
+- Ingest the July 29 newsletter, then work the candidate queue by `hit_count`
+  via `CatalogPanel`, which backfills in bulk.
+- Known gap: no timeout on the per-chunk Anthropic call. A stalled request hangs
+  the run indefinitely; phase logging makes it visible but does not cut it off.

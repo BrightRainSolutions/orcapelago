@@ -19,7 +19,7 @@ for (const line of readFileSync(join(root, '.env'), 'utf8').split(/\r?\n/)) {
 }
 
 const fixture = readFileSync(
-  join(root, 'docs', 'sample-newsletters', '2026-07-15-whale-sighting-report.txt'),
+  join(root, 'docs', 'sightings-newsletters', '2026-07-15-whale-sighting-report.txt'),
   'utf8'
 );
 const { newsletterDate, chunks } = preprocessNewsletter(fixture);

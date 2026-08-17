@@ -36,17 +36,36 @@ export default async (req) => {
     insert into newsletters (id, title, raw_text, status)
     values (${id}, ${givenTitle ?? null}, ${text}, 'processing')`;
 
+  // Phase logging. Extraction is long and was previously silent, so a stalled
+  // chunk was indistinguishable from a slow one. These go to the terminal under
+  // scripts/run-ingest.mjs and to the function log under netlify dev/deploy.
+  const t0 = Date.now();
+  const at = () => `${Math.round((Date.now() - t0) / 1000)}s`;
+  const log = (msg) => console.log(`[ingest ${id} ${at()}] ${msg}`);
+
   try {
     const { title, newsletterDate, dateRange, chunks } = preprocessNewsletter(text);
     if (!chunks.length) throw new Error('Preprocessing found no species sections — is this a whale sighting report?');
     if (!newsletterDate) throw new Error('Could not find the newsletter publication date in the text');
+    log(`preprocessed: ${chunks.length} chunks, newsletter date ${newsletterDate}`);
 
     const anthropic = new Anthropic();
-    const { sightings, warnings: extractWarnings } = await extractSightings(chunks, anthropic, newsletterDate);
+    const { sightings, warnings: extractWarnings } = await extractSightings(
+      chunks,
+      anthropic,
+      newsletterDate,
+      {
+        onProgress: (done, total, found) =>
+          log(`extract ${done}/${total} chunks — ${found} sightings so far`)
+      }
+    );
     if (!sightings.length) {
       throw new Error(`Extraction produced no sightings. ${extractWarnings.join('; ')}`.trim());
     }
+    log(`extraction done: ${sightings.length} sightings after dedupe${extractWarnings.length ? `, ${extractWarnings.length} warning(s)` : ''}`);
+
     const { warnings: geoWarnings } = await geocodeSightings(sightings, sql, anthropic);
+    log(`geocoding done${geoWarnings.length ? ` with ${geoWarnings.length} warning(s)` : ''}; inserting ${sightings.length} rows`);
 
     for (const s of sightings) {
       await sql`
@@ -71,8 +90,9 @@ export default async (req) => {
         sighting_count = ${sightings.length},
         error_message = ${warnings.length ? `Completed with warnings: ${warnings.join('; ')}`.slice(0, 2000) : null}
       where id = ${id}`;
+    log(`complete: ${sightings.length} sightings${warnings.length ? ` (${warnings.length} warning(s))` : ''}`);
   } catch (err) {
-    console.error('ingest failed:', err);
+    console.error(`[ingest ${id} ${at()}] failed:`, err);
     await sql`
       update newsletters set status = 'failed', error_message = ${String(err.message ?? err).slice(0, 2000)}
       where id = ${id}`;

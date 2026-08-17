@@ -17,6 +17,7 @@
 // Map view (spec §8.1): full-bleed MapLibre map, sightings as a clustered
 // GeoJSON source colored by species, popups, date/species filters.
 import { onMounted, onUnmounted, reactive, ref, computed, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { buildBasemapStyle, SALISH_SEA_CENTER, DEFAULT_ZOOM } from '../map/basemap.js';
@@ -25,6 +26,7 @@ import { popupHtml } from '../map/popup.js';
 import { fetchSightings } from '../api/sightings.js';
 import FilterPanel from '../components/FilterPanel.vue';
 
+const route = useRoute();
 const mapContainer = ref(null);
 const dataSource = ref('api');
 const allFeatures = ref([]);
@@ -126,6 +128,23 @@ function applyData() {
 
 watch(visibleFeatures, applyData);
 
+/**
+ * Deep link from the sightings table (/?sighting=<id>): centre on that
+ * sighting and open its popup. Zooms past clusterMaxZoom (13) so the point
+ * renders on its own rather than hidden inside a cluster.
+ */
+function focusQuerySighting() {
+  const id = route.query.sighting;
+  if (!id) return;
+  const feature = allFeatures.value.find((f) => f.properties.id === id);
+  if (!feature) return;
+  map.easeTo({ center: feature.geometry.coordinates, zoom: 14 });
+  new maplibregl.Popup({ maxWidth: '320px' })
+    .setLngLat(feature.geometry.coordinates)
+    .setHTML(popupHtml(feature.properties))
+    .addTo(map);
+}
+
 onMounted(async () => {
   const [style, result] = await Promise.all([buildBasemapStyle(), fetchSightings()]);
 
@@ -152,6 +171,7 @@ onMounted(async () => {
   map.on('load', () => {
     addSightingLayers();
     applyData();
+    focusQuerySighting();
   });
 });
 

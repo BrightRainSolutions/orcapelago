@@ -15,19 +15,19 @@ The basemap is isolated in [src/map/basemap.js](src/map/basemap.js); both the ba
 ## Project tree
 
 ```
-design/                  spec + raw newsletter source material
-docs/sample-newsletters/ canonical test fixture (July 15, 2026 report)
-db/                      migrations + gazetteer seed SQL
-lib/                     shared server logic (pure where possible, unit-testable)
-  preprocess.js            strip boilerplate, detect SUMMARY, chunk on headers
-  extract.js               Claude extraction per chunk + dedupe
-  geocode.js               GPS → catalog → AI batch → candidates chain
-  gps-parse.js             embedded coordinate formats
-  prompts.js               extraction + geocoding prompt templates
-  db.js / auth.js          Neon client, X-Admin-Token check
-netlify/functions/       API endpoints (see netlify.toml for /api/* routing)
-src/                     Vue app: map, sightings table, about, admin
-tests/                   vitest — preprocessing + GPS parsing, no API calls
+design/                     spec + raw newsletter source material
+docs/sightings-newsletters/ newsletter source text (July 15 + July 29, 2026)
+db/                         migrations + gazetteer seed SQL
+lib/                        shared server logic (pure where possible, unit-testable)
+  preprocess.js               strip boilerplate, detect SUMMARY, chunk on headers
+  extract.js                  Claude extraction per chunk + dedupe
+  geocode.js                  GPS → catalog → AI batch → candidates chain
+  gps-parse.js                embedded coordinate formats
+  prompts.js                  extraction + geocoding prompt templates
+  db.js / auth.js             Neon client, X-Admin-Token check
+netlify/functions/          API endpoints (see netlify.toml for /api/* routing)
+src/                        Vue app: map, sightings table, about, admin
+tests/                      vitest — preprocessing + GPS parsing, no API calls
 ```
 
 ## Working inside Dropbox (multi-machine dev)
@@ -51,6 +51,64 @@ Note: `.git` syncs through Dropbox too, which is fine for one person working one
 3. Copy `.env.example` to `.env` and fill in `DATABASE_URL`, `ANTHROPIC_API_KEY`, `ADMIN_TOKEN`.
 4. `npm run dev` (Netlify Dev: Vite + functions), or `npm run dev:vite` for frontend only.
 5. `npm test`
+
+## Ingesting a newsletter
+
+Ingest runs from the CLI, not the admin paste box. A real newsletter takes
+longer than Netlify's 15-minute background-function ceiling, so the deployed
+Ingest tab cannot finish one. `run-ingest.mjs` has no such limit and runs the
+identical code path.
+
+1. **Save the text** to `docs/sightings-newsletters/YYYY-MM-DD-whale-sighting-report.txt`.
+
+2. **Put the publication date alone on its own line at the top** — `July 29, 2026`,
+   nothing else on that line, within the first 10 lines. Without it the ingest
+   aborts. Section headers (`Fri, Jul 10 - Puget Sound`) carry no year and
+   borrow it from this date.
+
+3. **Dry-run it.** Free — no API calls, no database, no `.env`:
+
+   ```
+   node scripts/dry-run.mjs docs/sightings-newsletters/2026-07-29-whale-sighting-report.txt
+   ```
+
+   Check three things: the date parsed; every species section you expect
+   appears under BANNERS RECOGNISED; and nothing under UNRECOGNISED ALL-CAPS
+   LINES names a species.
+
+   That third check matters most. An unrecognised banner raises no error — its
+   sightings are swallowed into the *preceding* section and extracted under the
+   wrong species. Add new banners to `SPECIES_BANNERS` in `lib/preprocess.js`.
+   A genuinely new species also needs a key in `SPECIES_KEYS` (`lib/extract.js`),
+   the allowed list in `lib/prompts.js`, and a label + colour in
+   `src/map/species.js`.
+
+4. **Ingest**:
+
+   ```
+   node scripts/run-ingest.mjs docs/sightings-newsletters/2026-07-29-whale-sighting-report.txt
+   ```
+
+   Each phase logs with elapsed time — per-chunk extraction progress, then
+   geocoding, then the insert. Expect minutes: the dry-run's chunk count is the
+   number of Claude calls, three of which run concurrently.
+
+5. **Resolve locations** at `/admin`:
+   - **Catalog first.** Pending candidates are ordered by `hit_count`, and each
+     Promote backfills every flagged sighting sharing that raw text — it drains
+     the review queue underneath you.
+   - **Review queue second**, for what remains. Click-placing on the mini-map
+     sets `geo_method='manual'`.
+
+Sightings are inserted only after extraction *and* geocoding both finish, so a
+failed or hung run leaves nothing half-written:
+
+```sql
+delete from newsletters where status in ('failed', 'processing');
+```
+
+That cascades to any sightings the run did write. Don't run it while an ingest
+is genuinely in flight.
 
 ## Build order (spec §9)
 

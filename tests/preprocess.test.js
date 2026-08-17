@@ -9,7 +9,7 @@ import {
 } from '../lib/preprocess.js';
 
 const fixture = readFileSync(
-  new URL('../docs/sample-newsletters/2026-07-15-whale-sighting-report.txt', import.meta.url),
+  new URL('../docs/sightings-newsletters/2026-07-15-whale-sighting-report.txt', import.meta.url),
   'utf8'
 );
 const result = preprocessNewsletter(fixture);

@@ -267,7 +267,7 @@ POST  /api/geocode-candidates/:id/reject   admin
 1. Neon schema + migration script; seed gazetteer with ~10 hand-entered locations for testing (Bush Point, Lime Kiln, Sandy Point, Possession Point, Alki Point, Point No Point, Edmonds ferry dock, Langley, East Point [Whidbey], Olalla Bay).
 2. `get-sightings` + `get-newsletters` functions against seed data.
 3. Map view with clustering + popups + filters (fake data first).
-4. Ingest Background Function: pre-process + chunking, tested against the sample newsletter in `docs/sample-newsletters/`.
+4. Ingest Background Function: pre-process + chunking, tested against the sample newsletter in `docs/sightings-newsletters/`.
 5. Extraction prompt + parsing + persistence. Iterate against the sample until recall on form submissions and timestamped reports is solid.
 6. Geocoding chain (GPS parse → catalog → AI batch → candidates).
 7. Admin UI: paste, status, review queue, catalog editor.
