@@ -17,10 +17,15 @@ export default async (req) => {
   try {
     if (req.method === 'GET' && !id) {
       const rows = await sql`
-        select id, location_raw, suggested_name, lat, lng, ai_confidence,
-               ai_reasoning, hit_count
-        from geocode_candidates where status = 'pending'
-        order by hit_count desc, location_raw`;
+        select c.id, c.location_raw, c.suggested_name, c.lat, c.lng, c.ai_confidence,
+               c.ai_reasoning, c.hit_count,
+               -- one sighting at this location, so the row can be opened on the
+               -- review map. Judging a coordinate without seeing water is guesswork.
+               (select s.id from sightings s
+                 where s.location_raw = c.location_raw and s.needs_review
+                 limit 1) as sample_sighting_id
+        from geocode_candidates c where c.status = 'pending'
+        order by c.hit_count desc, c.location_raw`;
       return Response.json({ candidates: rows });
     }
 

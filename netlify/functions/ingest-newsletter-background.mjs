@@ -74,13 +74,13 @@ export default async (req) => {
         insert into sightings
           (newsletter_id, sighting_date, sighting_time, species, species_raw,
            pod_or_group, individual_ids, count, direction, behaviors,
-           location_raw, gazetteer_id, lat, lng, geo_method, needs_review,
-           summary, raw_excerpt, reporter, report_kind)
+           detection_methods, location_raw, gazetteer_id, landmark_id, lat, lng,
+           geo_method, needs_review, summary, raw_excerpt, reporter, report_kind)
         values
           (${id}, ${s.sighting_date}, ${s.sighting_time}, ${s.species}, ${s.species_raw},
            ${s.pod_or_group}, ${s.individual_ids}, ${s.count}, ${s.direction}, ${s.behaviors},
-           ${s.location_raw}, ${s.gazetteer_id}, ${s.lat}, ${s.lng}, ${s.geo_method}, ${s.needs_review},
-           ${s.summary}, ${s.raw_excerpt}, ${s.reporter}, ${s.report_kind})`;
+           ${s.detection_methods}, ${s.location_raw}, ${s.gazetteer_id}, ${s.landmark_id}, ${s.lat}, ${s.lng},
+           ${s.geo_method}, ${s.needs_review}, ${s.summary}, ${s.raw_excerpt}, ${s.reporter}, ${s.report_kind})`;
     }
 
     const warnings = [...preWarnings, ...extractWarnings, ...geoWarnings];

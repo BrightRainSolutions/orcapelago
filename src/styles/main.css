@@ -1,70 +1,340 @@
 :root {
-  --teal: #006D77; /* theme color (Southern Resident teal) */
+  --ink: #111111;       /* orca black — chrome, type, borders */
+  --ink-2: #5A6165;     /* secondary type */
+  --line: #E4E7E9;      /* hairline rules inside panels */
+  --paper: #ffffff;
+  --teal: #006D77;      /* legacy accent; pending the palette decision */
+  --accent: #0044AA;    /* Bright Rain blue — the one interactive colour */
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; font-family: system-ui, sans-serif; }
 
+/* Full-height shell. The map fills whatever the header leaves over, worked out
+   by flex rather than a magic offset: .map-view was `calc(100vh - 2.4rem)`,
+   which silently stopped matching the header the moment its padding changed
+   and left a 7px scrollbar on every page. */
+html, body { height: 100%; }
+body { margin: 0; font-family: system-ui, sans-serif; color: var(--ink); }
+#app { min-height: 100%; display: flex; flex-direction: column; }
+.topnav { flex: none; }
+
+/* --- Header --- */
 .topnav {
   display: flex;
-  gap: 1rem;
-  align-items: center;
-  padding: 0.5rem 1rem;
-  background: var(--teal);
+  align-items: baseline;
+  gap: 1.35rem;
+  padding: 0.65rem 1.1rem;
+  background: var(--ink);
 }
-.topnav a { color: #fff; text-decoration: none; }
-.topnav .brand { font-weight: 700; margin-right: auto; }
+.topnav a {
+  color: rgba(255, 255, 255, 0.6);
+  text-decoration: none;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  padding-bottom: 0.15rem;
+  border-bottom: 1px solid transparent;
+  transition: color 120ms ease;
+}
+.topnav a:hover { color: #fff; }
+.topnav a.router-link-exact-active { color: #fff; border-bottom-color: #fff; }
+.topnav .brand {
+  margin-right: auto;
+  color: #fff;
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding-bottom: 0;
+}
+/* the brand is also a link to "/", so suppress the active underline on it */
+.topnav .brand.router-link-exact-active { border-bottom-color: transparent; }
+.topnav-admin { margin-left: 0.25rem; }
 
-.page { padding: 1rem; max-width: 60rem; margin: 0 auto; }
+/* --- Modal overlay --- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: rgba(17, 17, 17, 0.35);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 2.5rem 1rem;
+  overflow-y: auto;
+}
+.modal {
+  position: relative;
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  width: 100%;
+  max-width: 58rem;
+  max-height: calc(100vh - 5rem);
+  display: flex;
+  flex-direction: column;
+  outline: none;
+}
+.modal-body { overflow-y: auto; }
+.modal-close {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.55rem;
+  z-index: 1;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 1.35rem;
+  line-height: 1;
+  padding: 0.2rem 0.4rem;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.modal-close:hover { color: var(--ink); }
+.modal .page { padding-top: 1.75rem; }
+
+@media (max-width: 640px) {
+  .modal-backdrop { padding: 0; }
+  .modal { max-height: 100vh; border: none; }
+}
+
+/* width:100% is load-bearing. #app is a flex column (so the map can persist
+   across routes), which makes .page a flex item — and an auto margin on the
+   cross axis overrides align-items:stretch, so without an explicit width the
+   page shrink-wraps to its content instead of filling to max-width. That cost
+   the admin layout ~156px and squeezed the review editor. */
+.page { width: 100%; padding: 1.5rem 1.25rem 4rem; max-width: 60rem; margin: 0 auto; }
+.page h1 {
+  font-size: 1.35rem; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; margin: 0.5rem 0 1.25rem;
+}
+.page a { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
+.page a:hover { color: #0044AA; }
+
+/* --- About --- */
+.about { max-width: 44rem; line-height: 1.6; }
+.about-lede {
+  font-size: 1.05rem;
+  padding-bottom: 1.4rem;
+  border-bottom: 1px solid var(--ink);
+  margin-bottom: 0;
+}
+.about-section { padding: 1.6rem 0; border-bottom: 1px solid var(--line); }
+.about-section h2 {
+  font-size: 0.74rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--ink-2); margin: 0 0 0.7rem;
+}
+.about-section p { margin: 0 0 0.85rem; }
+.about-section p:last-child { margin-bottom: 0; }
+.about-logo-link { display: inline-block; border: 1px solid var(--line); padding: 0.9rem 1.1rem; margin-bottom: 1rem; }
+.about-logo-link:hover { border-color: var(--ink); }
+.about-logo { display: block; max-width: 15rem; height: auto; }
+.about-cta { margin-top: 1.1rem; }
+.about-button {
+  display: inline-block;
+  padding: 0.55rem 1.1rem;
+  background: var(--ink); color: #fff;
+  text-decoration: none;
+  font-size: 0.72rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.09em;
+  border: 1px solid var(--ink);
+}
+.about-button:hover { background: #fff; color: var(--ink); }
+.about-footer { padding-top: 1.6rem; font-size: 0.8rem; color: var(--ink-2); }
+.about-footer p { margin: 0; }
+.about-footer a { color: var(--ink-2); }
 
 /* --- Map view --- */
-.map-view { position: relative; height: calc(100vh - 2.4rem); }
-.map-container { height: 100%; }
+.map-view {
+  position: relative;      /* anchor for the floating panels */
+  flex: 1 1 auto;
+  min-height: 0;           /* let it shrink below content size */
+  display: flex;
+  flex-direction: column;
+}
+.map-container { flex: 1 1 auto; min-height: 0; }
 
+/* Floating panels: squared, hairline-boxed, no drop shadow. */
 .filter-panel {
   position: absolute;
   top: 0.75rem;
   left: 0.75rem;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
-  padding: 0.6rem 0.75rem;
-  font-size: 0.8rem;
-  max-width: 15rem;
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  padding: 1.05rem 1.15rem;
+  font-size: 0.78rem;
+  max-width: 16.5rem;
 }
-.fp-dates { display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 0.5rem; }
-.fp-dates label { display: flex; justify-content: space-between; gap: 0.5rem; align-items: center; }
-.fp-species { display: flex; flex-direction: column; gap: 0.15rem; }
-.fp-check { display: flex; align-items: center; gap: 0.4rem; cursor: pointer; }
-.fp-dot { width: 0.7rem; height: 0.7rem; border-radius: 50%; display: inline-block; }
+.fp-heading { margin-bottom: 0.9rem; padding-bottom: 0.7rem; border-bottom: 1px solid var(--line); }
+.fp-heading strong {
+  display: block;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+}
+.fp-sub { display: block; margin-top: 0.2rem; color: var(--ink-2); font-size: 0.72rem; }
+.fp-dates { display: flex; flex-direction: column; gap: 0.45rem; margin-bottom: 1rem; }
+.fp-dates-foot { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.2rem; }
+.fp-loading { color: #888; font-size: 0.72rem; font-style: italic; }
+.fp-dates label {
+  display: flex; justify-content: space-between; gap: 0.5rem; align-items: center;
+  font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-2);
+}
+/* Never inherit the browser's date field. */
+.fp-dates input[type="date"] {
+  font: inherit;
+  font-size: 0.74rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 0;
+  padding: 0.3rem 0.38rem;
+}
+.fp-dates input[type="date"]:focus { outline: none; border-color: var(--ink); }
+.fp-species { display: flex; flex-direction: column; gap: 0.4rem; }
+.fp-check { display: flex; align-items: center; gap: 0.6rem; cursor: pointer; }
+.fp-reset {
+  font: inherit;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-top: 0.1rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+.fp-reset:hover { background: var(--ink); color: #fff; }
+
+/* Custom checkbox: squared, fills orca black when checked. */
+.fp-check input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  width: 0.85rem;
+  height: 0.85rem;
+  flex: none;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  display: inline-grid;
+  place-content: center;
+  cursor: pointer;
+}
+.fp-check input[type="checkbox"]::before {
+  content: "";
+  width: 0.43rem;
+  height: 0.43rem;
+  background: var(--ink);
+  transform: scale(0);
+  transition: transform 90ms ease-in-out;
+}
+.fp-check input[type="checkbox"]:checked::before { transform: scale(1); }
+.fp-check input[type="checkbox"]:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+
+/* Swatches are circles — the one round shape in a squared UI, mirroring the
+   map markers exactly (species fill, species ring). */
+.fp-dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  display: inline-block;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid transparent;
+}
+
+/* Group label for the always-visible orca layers. Typography matches the
+   "Other Species" summary exactly; the left pad is the width of that
+   disclosure's triangle plus its gap, so the two headings' text aligns. */
+.fp-group-label {
+  margin-bottom: 0.7rem;
+  padding-left: 0.7rem;   /* triangle width + gap, so both headings align */
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-2);
+}
+
+/* "Other Species" disclosure — native <details>, custom marker. */
+.fp-more { margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid var(--line); }
+.fp-more summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-2);
+  transition: color 120ms ease;
+}
+.fp-more summary::-webkit-details-marker { display: none; }
+.fp-more summary::before {
+  content: "";
+  width: 0; height: 0;
+  border-left: 4px solid currentColor;
+  border-top: 3.5px solid transparent;
+  border-bottom: 3.5px solid transparent;
+  transition: transform 120ms ease;
+}
+.fp-more[open] summary::before { transform: rotate(90deg); }
+.fp-more summary:hover { color: var(--ink); }
+.fp-more summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.fp-more .fp-species { margin-top: 0.7rem; }
 
 .map-status {
   position: absolute;
   bottom: 1.75rem;
   left: 0.75rem;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 6px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
-  padding: 0.25rem 0.6rem;
-  font-size: 0.8rem;
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   display: flex;
   gap: 0.5rem;
   align-items: center;
 }
+.map-status-note { color: var(--ink-2); border-left: 1px solid var(--line); padding-left: 0.5rem; text-transform: none; letter-spacing: 0; }
+.sightings-note { font-size: 0.78rem; color: #666; margin: 0.3rem 0 0; }
 .demo-badge {
-  background: #E9C46A;
-  border-radius: 4px;
-  padding: 0 0.35rem;
-  font-size: 0.7rem;
-  font-weight: 600;
+  background: var(--ink);
+  color: #fff;
+  border-radius: 0;
+  padding: 0.05rem 0.35rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
 }
+
+/* Visually hidden but present for assistive tech. */
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  margin: -1px; padding: 0; overflow: hidden;
+  clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+
+.fp-footer { margin-top: 0.9rem; padding-top: 0.75rem; border-top: 1px solid var(--line); }
+.fp-table-link {
+  font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--ink-2); text-decoration: none; border-bottom: 1px solid var(--line);
+}
+.fp-table-link:hover { color: var(--ink); border-bottom-color: var(--ink); }
 
 /* --- Sightings table --- */
 .sightings { max-width: 72rem; }
 .sightings-layout { display: grid; grid-template-columns: minmax(11rem, 14rem) 1fr; gap: 1.5rem; align-items: start; }
 
 /* FilterPanel is absolutely positioned for the map overlay; anchor it in flow here. */
-.sightings-filters .filter-panel { position: static; max-width: none; box-shadow: none; border: 1px solid #ddd; }
+.sightings-filters .filter-panel { position: static; max-width: none; }
 .sightings-count { font-size: 0.8rem; color: #555; margin: 0.6rem 0 0; display: flex; gap: 0.4rem; align-items: center; }
 
 .sightings-table-wrap { overflow-x: auto; }
@@ -76,26 +346,117 @@ body { margin: 0; font-family: system-ui, sans-serif; }
 .sightings-table .st-notes { color: #666; font-size: 0.8rem; max-width: 14rem; }
 
 .sighting-row { cursor: pointer; }
-.sighting-row:hover, .sighting-row:focus { background: #e6f2f3; outline: none; }
-.sighting-row:focus-visible { box-shadow: inset 0 0 0 2px var(--teal); }
+.sighting-row:hover { background: #F2F5F6; }
+.sighting-row.open { background: #F2F5F6; }
+.sighting-row.open td { border-bottom-color: transparent; }
+
+/* The date cell holds the real control: a row cannot carry button semantics
+   without ceasing to be a row to assistive tech. */
+.st-toggle {
+  font: inherit; text-align: left;
+  border: none; background: none; padding: 0; margin: 0;
+  color: var(--ink); cursor: pointer;
+  border-bottom: 1px dotted #B9C0C4;
+}
+.st-toggle:hover { border-bottom-color: var(--ink); }
+.st-toggle:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+.sighting-detail td {
+  background: #F2F5F6;
+  padding: 0.15rem 0.5rem 0.9rem 0.5rem;
+  border-bottom: 1px solid #ddd;
+}
+.sd-summary { margin: 0 0 0.6rem; max-width: 44rem; }
+.sd-facts {
+  display: grid; grid-template-columns: auto 1fr; gap: 0.15rem 0.75rem;
+  margin: 0 0 0.75rem; font-size: 0.8rem;
+}
+.sd-facts dt { color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.66rem; align-self: center; }
+.sd-facts dd { margin: 0; }
+.sd-map {
+  font: inherit; font-size: 0.66rem;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  padding: 0.3rem 0.6rem; cursor: pointer;
+  border: 1px solid var(--ink); border-radius: 0; background: #fff; color: var(--ink);
+}
+.sd-map:hover { background: var(--ink); color: #fff; }
 
 @media (max-width: 900px) {
   .sightings-layout { grid-template-columns: 1fr; }
 }
 
 /* --- Admin --- */
-.admin { max-width: 72rem; }
+/* Shell rather than a page: fills the viewport so Review can go full-bleed.
+   Ingest and Catalog sit in .admin-boxed, which scrolls and centres. */
+.admin-shell {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.admin-boxed {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1.5rem 1.5rem 4rem;
+}
+/* Centred, but using the width that's there — the catalog tables were being
+   squeezed into a text column. */
+.admin-boxed > * { max-width: 84rem; margin: 0 auto; }
 .admin-gate { display: flex; gap: 0.5rem; max-width: 26rem; }
 .admin-gate input { flex: 1; }
 .admin-error { color: #b00020; }
-.admin-tabs { display: flex; gap: 0.25rem; border-bottom: 2px solid var(--teal); margin-bottom: 1rem; }
-.admin-tabs button { border: none; background: none; padding: 0.5rem 0.9rem; cursor: pointer; font-size: 0.9rem; }
-.admin-tabs button.active { background: var(--teal); color: #fff; }
-.admin-tabs .admin-signout { margin-left: auto; color: #777; }
+.admin-tabs {
+  flex: none;
+  /* #app is min-height:100%, so a long Catalog table grows the shell and the
+     PAGE scrolls rather than the pane. That's fine for 1,000 rows — but the
+     tabs would scroll away with it. Sticky keeps them without needing a
+     calc() height on the shell. */
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--paper);
+  display: flex;
+  gap: 0.25rem;
+  padding: 0 0.75rem;
+  border-bottom: 1px solid var(--ink);
+}
+.admin-tabs button {
+  border: none; background: none; cursor: pointer;
+  padding: 0.6rem 0.9rem;
+  font: inherit; font-size: 0.7rem;
+  text-transform: uppercase; letter-spacing: 0.09em;
+  color: var(--ink-2);
+}
+.admin-tabs button:hover { color: var(--ink); }
+.admin-tabs button.active { background: var(--ink); color: #fff; }
+.admin-tabs .admin-back { margin-left: auto; align-self: center; font-size: 0.72rem;
+  text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-2);
+  text-decoration: none; padding: 0 0.9rem; }
+.admin-tabs .admin-back:hover { color: var(--ink); }
+.admin-tabs .admin-signout { color: #777; }
 .admin-hint { color: #666; font-size: 0.85rem; }
 .admin input, .admin select, .admin textarea, .admin button { font: inherit; }
-.admin input, .admin select, .admin textarea { border: 1px solid #ccc; border-radius: 4px; padding: 0.3rem 0.45rem; }
-.admin button { border: 1px solid var(--teal); background: var(--teal); color: #fff; border-radius: 4px; padding: 0.35rem 0.8rem; cursor: pointer; }
+.admin input, .admin select, .admin textarea { border: 1px solid var(--line); border-radius: 0; padding: 0.35rem 0.45rem; background: var(--paper); color: var(--ink); }
+.admin input:focus, .admin select:focus, .admin textarea:focus { outline: none; border-color: var(--ink); }
+/*
+  The filled black style belongs to ACTIONS — Save, Promote, Add, Reject — not
+  to chrome that merely happens to be a <button>. The tabs, the review-queue
+  rows, and the panels' × are all buttons, and this rule (equal in specificity
+  to their own styling, but later in the file) was quietly repainting all of
+  them black. That is what made both the selected tab and the selected review
+  row impossible to see: their .active styling was black on an already-black
+  element.
+
+  The exclusion sits inside :where(), which contributes zero specificity, so
+  these stay at (0,1,1) and every existing button style is unaffected. Add any
+  future chrome button to this list rather than fighting it with a more
+  specific override downstream.
+*/
+.admin button:not(:where(.admin-tabs button, .review-item, .sp-close)) {
+  border: 1px solid var(--ink); background: var(--ink); color: #fff; border-radius: 0; padding: 0.4rem 0.8rem; cursor: pointer;
+  font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.07em; }
+.admin button:not(:where(.admin-tabs button, .review-item, .sp-close)):hover:not(:disabled) { background: #fff; color: var(--ink); }
 .admin button:disabled { opacity: 0.5; cursor: default; }
 .admin button.danger { background: #fff; color: #b00020; border-color: #b00020; }
 
@@ -108,7 +469,19 @@ body { margin: 0; font-family: system-ui, sans-serif; }
 .admin-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-bottom: 1.5rem; }
 .admin-table th { text-align: left; border-bottom: 2px solid #ddd; padding: 0.3rem 0.4rem; }
 .admin-table td { border-bottom: 1px solid #eee; padding: 0.25rem 0.4rem; vertical-align: middle; }
-.admin-table td.raw { max-width: 18rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The model's reasoning, collapsed — the row has no width to spare. */
+.cand-why { margin-top: 0.15rem; }
+.cand-why summary {
+  list-style: none; cursor: pointer;
+  font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-2);
+}
+.cand-why summary::-webkit-details-marker { display: none; }
+.cand-why summary::before { content: "▸ "; }
+.cand-why[open] summary::before { content: "▾ "; }
+.cand-why summary:hover { color: var(--ink); }
+.cand-why p { margin: 0.3rem 0 0; font-size: 0.72rem; color: var(--ink-2); white-space: normal; }
+
+.admin-table td.raw { max-width: 20rem; }
 .admin-table td.notes { color: #888; font-size: 0.75rem; max-width: 16rem; }
 .admin-table input { width: 100%; min-width: 5rem; }
 .admin-table input.coord { min-width: 5.5rem; width: 6.5rem; }
@@ -117,45 +490,258 @@ body { margin: 0; font-family: system-ui, sans-serif; }
 .status-failed { color: #b00020; }
 .status-processing { color: #b8860b; }
 
-.review { display: grid; grid-template-columns: minmax(16rem, 24rem) 1fr; gap: 1.5rem; align-items: start; }
-.review-list { max-height: 75vh; overflow-y: auto; display: flex; flex-direction: column; gap: 0.3rem; }
-.review-item { text-align: left; background: #fff; color: #222; border: 1px solid #ddd; display: flex; flex-direction: column; gap: 0.1rem; }
-.review-item.active { border-color: var(--teal); background: #e6f2f3; }
-.review-item .ri-loc { font-weight: 600; font-size: 0.85rem; }
-.review-item .ri-meta { color: #777; font-size: 0.75rem; }
-.review-excerpt { margin: 0 0 0.75rem; padding: 0.5rem 0.75rem; background: #f6f6f6; border-left: 3px solid var(--teal); font-size: 0.85rem; white-space: pre-wrap; }
-.review-fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem 1rem; margin-bottom: 0.5rem; }
-.review-fields label { display: flex; flex-direction: column; font-size: 0.8rem; color: #555; }
-.review-hint { color: #666; font-size: 0.8rem; margin: 0.25rem 0; }
-.mini-map { height: 300px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 0.75rem; }
-.review-actions { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
-.review-catalog { display: flex; gap: 0.4rem; }
-.review-msg { color: #444; font-size: 0.85rem; }
+/* Full-bleed review. Map is the surface; panels float, same as the map view. */
+.review { position: relative; flex: 1 1 auto; min-height: 0; display: flex; }
+/* No explicit height on the map: align-items:stretch only applies when the
+   item's cross size is auto, so `height:100%` would opt out of the stretch AND
+   then resolve against a flex-determined (indefinite) height — computing to 0.
+   Let stretch size it. */
+.review-map { flex: 1 1 auto; min-width: 0; }
+.mini-map { min-height: 0; }
+
+.review-queue,
+.review-editor {
+  position: absolute;
+  top: 0.75rem;
+  max-height: calc(100% - 1.5rem);
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  padding: 0.9rem 1rem;
+  font-size: 0.78rem;
+}
+.review-queue { left: 0.75rem; width: 21rem; }
+.review-editor { right: 0.75rem; width: 23.5rem; overflow-y: auto; }
+
+.rq-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem;
+  margin-bottom: 0.7rem; padding-bottom: 0.6rem; border-bottom: 1px solid var(--line);
+}
+.rq-head strong {
+  font-size: 0.74rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink);
+}
+.rq-count { font-size: 0.72rem; color: var(--ink-2); }
+
+.review-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; margin: 0 -0.25rem; }
+/*
+  Scoped to .review-list deliberately. `.admin button` no longer matches these
+  rows (see the :where() exclusion on that rule), but this list is the place
+  the collision did the most damage — every row rendered black, so the
+  selected one was black on black — and the extra specificity means it cannot
+  come back through some later single-class rule.
+*/
+.review-list .review-item {
+  width: 100%; text-align: left; cursor: pointer;
+  background: none; color: var(--ink);
+  border: none;
+  border-bottom: 1px solid var(--line);
+  padding: 0.5rem 0.25rem;
+  display: flex; flex-direction: column; gap: 0.1rem;
+  font: inherit;
+}
+.review-list .review-item:hover { background: #F2F5F6; }
+
+/*
+  Selected row. Deliberately over-specified (.review-list .review-item.active
+  beats any single-class rule) and stated twice — background AND an inset bar —
+  because this highlight is the only thing tying the editor on the right to the
+  row on the left, and selection often moves on its own: on arrival from a
+  deep link, and again after every save. A hover rule of equal specificity
+  landing later in the file would otherwise wash it out silently.
+*/
+.review-list .review-item.active,
+.review-list .review-item.active:hover {
+  background: var(--ink);
+  color: #fff;
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.review-list .review-item.active .ri-meta { color: rgba(255, 255, 255, 0.7); }
+.review-list .review-item.active .ri-tag { color: #fff; border-color: #fff; }
+.review-list .review-item .ri-loc { font-size: 0.78rem; }
+.review-list .review-item .ri-meta { color: var(--ink-2); font-size: 0.68rem; }
+
+/* The AI's one-line description — the useful summary of what was reported. */
+.review-summary {
+  margin: 0 0 0.6rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+.review-excerpt {
+  margin: 0 0 0.8rem; padding: 0.6rem 0.7rem;
+  background: #F2F5F6; border-left: 2px solid var(--ink);
+  font-size: 0.76rem; white-space: pre-wrap;
+  max-height: 9rem; overflow-y: auto;
+}
+.review-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0.55rem 0.7rem; margin-bottom: 0.7rem; }
+.review-fields label {
+  display: flex; flex-direction: column; gap: 0.2rem;
+  font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-2);
+}
+.review-hint { color: var(--ink-2); font-size: 0.7rem; margin: 0 0 0.8rem; }
+.review-actions { display: flex; flex-direction: column; gap: 0.5rem; }
+.review-place {
+  display: flex; flex-direction: column; gap: 0.2rem;
+  font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-2);
+}
+.review-save { width: 100%; padding: 0.55rem 0.8rem !important; }
+.review-msg { color: var(--ink); font-size: 0.75rem; }
 
 @media (max-width: 900px) {
-  .review { grid-template-columns: 1fr; }
+  .review-queue, .review-editor { position: static; width: auto; max-height: none; }
+  .review { flex-direction: column; }
 }
 
-/* --- Sighting popup --- */
-.sighting-popup { font-size: 0.8rem; line-height: 1.35; }
-.sighting-popup .sp-species { font-weight: 700; font-size: 0.85rem; }
-.sighting-popup .sp-who { color: #333; font-weight: 600; }
-.sighting-popup .sp-when { color: #555; }
-.sighting-popup .sp-where { margin-top: 0.15rem; }
-.sighting-popup .sp-doing { color: #555; font-style: italic; }
-.sighting-popup .sp-summary { margin-top: 0.25rem; }
-.sighting-popup .sp-reporter { margin-top: 0.25rem; color: #777; font-size: 0.72rem; }
-.sp-badge {
-  display: inline-block;
-  border-radius: 4px;
-  padding: 0 0.3rem;
-  font-size: 0.65rem;
-  font-weight: 600;
-  background: #e0e0e0;
-  color: #444;
-  vertical-align: middle;
+/* --- Sighting detail panel --- */
+.sighting-panel {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 19rem;
+  max-width: calc(100% - 1.5rem);
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  padding: 1.05rem 1.15rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
 }
-.sp-badge-gps { background: #c8e6c9; }
-.sp-badge-catalog { background: #b2dfdb; }
-.sp-badge-ai { background: #ffe0b2; }
-.sp-badge-manual { background: #d1c4e9; }
+.sp-close {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.4rem;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 1.05rem;
+  line-height: 1;
+  padding: 0.15rem 0.3rem;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.sp-close:hover { color: var(--ink); }
+/* Same collision as the review rows: inside .admin this bare × was picking up
+   the filled black button style and rendering as a solid block. */
+.admin .sp-close { background: none; border: none; color: var(--ink-2); font-size: 1.05rem; letter-spacing: 0; padding: 0.15rem 0.3rem; }
+.admin .sp-close:hover { background: none; color: var(--ink); }
+.sp-species {
+  display: flex; align-items: center; gap: 0.5rem;
+  font-size: 0.72rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.09em;
+  padding-right: 1.2rem;
+}
+.sp-who { margin-top: 0.15rem; font-weight: 600; }
+.sp-when { margin-top: 0.55rem; color: var(--ink-2); font-size: 0.72rem; }
+.sp-where { margin-top: 0.1rem; }
+.sp-detection {
+  display: inline-block;
+  margin-left: 0.35rem;
+  border-radius: 4px;
+  padding: 0 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  background: #ffe9c7;
+  color: #6a4a00;
+  vertical-align: middle;
+  cursor: help;
+}
+.sp-doing { margin-top: 0.15rem; color: var(--ink-2); font-style: italic; }
+.sp-summary { margin: 0.7rem 0 0; }
+.sp-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+  margin-top: 0.9rem; padding-top: 0.6rem; border-top: 1px solid var(--line);
+}
+.sp-reporter { color: var(--ink-2); font-size: 0.72rem; }
+.sp-badge {
+  border: 1px solid var(--line);
+  padding: 0.05rem 0.35rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-2);
+}
+
+@media (max-width: 640px) {
+  .sighting-panel { top: auto; bottom: 0.75rem; left: 0.75rem; right: 0.75rem; width: auto; }
+}
+
+/* --- MapLibre chrome ---------------------------------------------------
+   maplibre-gl.css is imported ahead of this file in main.js, so plain
+   selectors win on source order. Keep it that way — reordering those imports
+   silently reverts all of this. */
+.maplibregl-ctrl-group,
+.maplibregl-ctrl-group:not(:empty),            /* library sets its shadow here */
+.maplibregl-ctrl-group button,
+.maplibregl-ctrl-attrib,
+.maplibregl-ctrl-attrib.maplibregl-compact,    /* and rounds the pill here */
+.maplibregl-ctrl-attrib-button {
+  border-radius: 0;
+  box-shadow: none;
+}
+.maplibregl-ctrl-group { border: 1px solid var(--ink); }
+
+/* Deep links into the review editor: map popup → admin, candidate row → admin.
+   Styled as quiet text actions, not buttons — they navigate, they don't act. */
+.sp-edit {
+  display: inline-block;
+  margin-top: 0.75rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border-bottom: 1px solid var(--accent);
+  text-decoration: none;
+}
+.sp-edit:hover { background: var(--accent); color: #fff; }
+
+.cand-map {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid var(--accent);
+  margin-right: 0.5rem;
+}
+.cand-map:hover { background: var(--accent); color: #fff; }
+
+.ri-tag {
+  margin-left: 0.4rem;
+  font-style: normal;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  padding: 0 0.25rem;
+}
+
+/* The reporter's raw location string, shown read-only above the edit fields
+   so you can see what the AI was actually working from. */
+.review-raw {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+  border-left: 3px solid var(--accent);
+  padding-left: 0.5rem;
+}
+
+/*
+  Context markers: hydrophones and webcams.
+
+  Load-bearing, not cosmetic. MapLibre's .maplibregl-marker is
+  position:absolute with no size, so it shrink-to-fits its child; an inline
+  <svg> carrying only a viewBox has no intrinsic size, so width/height resolve
+  against a containing block that is itself sized by the content. That circle
+  collapses to 0x0 and the marker renders nothing at all — silently, with no
+  error. The explicit size here is what makes them visible.
+*/
+.map-marker { width: 22px; height: 22px; cursor: help; }
+.map-marker svg { width: 100%; height: 100%; display: block; }
+
+/* Mirror the camera glyph for west-facing cameras. Done in CSS rather than a
+   second SVG so there is one icon to maintain. */
+.webcam-marker.faces-west svg { transform: scaleX(-1); }

@@ -13,15 +13,30 @@ const EDITABLE = [
 
 export default async (req) => {
   if (!isAdmin(req)) return unauthorized();
-  if (req.method !== 'PATCH') {
+  // GET added so the map's Edit link can open ANY sighting in review, not
+  // just the ones still carrying needs_review. Seeing a wrong dot and having
+  // to hunt for it in a 1,000-row queue was the friction this removes.
+  if (req.method !== 'PATCH' && req.method !== 'GET') {
     return Response.json({ error: 'Method not allowed' }, { status: 405 });
   }
   const segs = new URL(req.url).pathname.split('/').filter(Boolean);
   const id = segs[segs.length - 1];
 
   try {
-    const body = await req.json();
     const sql = getSql();
+    if (req.method === 'GET') {
+      const [found] = await sql`
+        select id, newsletter_id, sighting_date::text, sighting_time::text, species,
+               species_raw, pod_or_group, individual_ids, count, direction, behaviors,
+               detection_methods, location_raw, gazetteer_id, landmark_id, lat, lng,
+               geo_method, needs_review, summary, raw_excerpt, reporter, report_kind
+        from sightings where id = ${id}`;
+      return found
+        ? Response.json({ sighting: found }, { headers: { 'Cache-Control': 'no-store' } })
+        : Response.json({ error: 'Not found' }, { status: 404 });
+    }
+
+    const body = await req.json();
     const [row] = await sql`select * from sightings where id = ${id}`;
     if (!row) return Response.json({ error: 'Not found' }, { status: 404 });
 

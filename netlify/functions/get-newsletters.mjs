@@ -1,5 +1,8 @@
 // GET /api/newsletters — public (spec §7).
 // Returns id, title, date range, status, sighting_count per newsletter.
+//
+// Note: "which newsletter is latest" deliberately lives in get-sightings
+// (?newsletter=latest), not here — one implementation, one round trip.
 import { getSql } from '../../lib/db.js';
 
 export default async () => {

@@ -34,6 +34,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/landmarks"
+  to = "/.netlify/functions/get-landmarks"
+  status = 200
+
+[[redirects]]
   from = "/api/gazetteer/*"
   to = "/.netlify/functions/gazetteer/:splat"
   status = 200

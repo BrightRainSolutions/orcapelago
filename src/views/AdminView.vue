@@ -1,25 +1,41 @@
 <template>
-  <main class="page admin">
+  <!--
+    Shell, not a page. Review needs a full-bleed map, so this is a flex column
+    that fills the viewport; Ingest, Candidates and Gazetteer get a boxed,
+    scrolling wrapper inside it. Wrapping everything in .page would cap the map
+    at a text column.
+
+    ?tab= and ?sighting= are how the map and the Candidates list deep-link into
+    the review editor for one specific row.
+  -->
+  <main class="admin admin-shell">
     <template v-if="!authed">
-      <h1>Admin</h1>
-      <p>Enter the admin token. This gate is convenience only — the API enforces the token on every admin call.</p>
-      <form class="admin-gate" @submit.prevent="login">
-        <input v-model="tokenInput" type="password" placeholder="Admin token" autocomplete="off" />
-        <button type="submit" :disabled="checking">{{ checking ? 'Checking…' : 'Enter' }}</button>
-      </form>
-      <p v-if="gateError" class="admin-error">{{ gateError }}</p>
+      <div class="admin-boxed">
+        <h1>Admin</h1>
+        <p>Enter the admin token. This gate is convenience only; the API enforces the token on every admin call.</p>
+        <form class="admin-gate" @submit.prevent="login">
+          <input v-model="tokenInput" type="password" placeholder="Admin token" autocomplete="off" />
+          <button type="submit" :disabled="checking">{{ checking ? 'Checking…' : 'Enter' }}</button>
+        </form>
+        <p v-if="gateError" class="admin-error">{{ gateError }}</p>
+        <p><router-link to="/">Back to map</router-link></p>
+      </div>
     </template>
 
     <template v-else>
       <nav class="admin-tabs">
         <button :class="{ active: tab === 'ingest' }" @click="tab = 'ingest'">Ingest</button>
         <button :class="{ active: tab === 'review' }" @click="tab = 'review'">Review queue</button>
-        <button :class="{ active: tab === 'catalog' }" @click="tab = 'catalog'">Catalog</button>
+        <button :class="{ active: tab === 'candidates' }" @click="tab = 'candidates'">Candidates</button>
+        <button :class="{ active: tab === 'gazetteer' }" @click="tab = 'gazetteer'">Gazetteer</button>
+        <router-link to="/" class="admin-back">Back to map</router-link>
         <button class="admin-signout" @click="logout">Sign out</button>
       </nav>
-      <IngestPanel v-if="tab === 'ingest'" />
-      <ReviewQueue v-else-if="tab === 'review'" />
-      <CatalogPanel v-else />
+
+      <div v-if="tab === 'ingest'" class="admin-boxed"><IngestPanel /></div>
+      <ReviewQueue v-else-if="tab === 'review'" :open-sighting-id="route.query.sighting ?? null" />
+      <div v-else-if="tab === 'candidates'" class="admin-boxed"><CandidatesPanel /></div>
+      <div v-else class="admin-boxed"><GazetteerPanel /></div>
     </template>
   </main>
 </template>
@@ -28,16 +44,21 @@
 // Admin (spec §8.4): token-gated client-side; token in localStorage, sent as
 // X-Admin-Token on admin calls. Real enforcement is in the functions.
 import { onMounted, ref } from 'vue';
+import { useRoute } from 'vue-router';
 import { getAdminToken, setAdminToken, clearAdminToken, validateAdminToken } from '../api/client.js';
 import IngestPanel from '../components/admin/IngestPanel.vue';
 import ReviewQueue from '../components/admin/ReviewQueue.vue';
-import CatalogPanel from '../components/admin/CatalogPanel.vue';
+import CandidatesPanel from '../components/admin/CandidatesPanel.vue';
+import GazetteerPanel from '../components/admin/GazetteerPanel.vue';
 
-const authed = ref(false);
+// See lib/auth.js — temporary local bypass, removed before deploy.
+const authed = ref(import.meta.env.VITE_OPEN_ADMIN === '1');
 const tokenInput = ref('');
 const gateError = ref('');
 const checking = ref(false);
-const tab = ref('ingest');
+const route = useRoute();
+// Deep link from the map: /admin?tab=review&sighting=<id>
+const tab = ref(route.query.tab ?? 'ingest');
 
 async function login() {
   checking.value = true;

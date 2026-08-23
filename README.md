@@ -85,6 +85,11 @@ identical code path.
    `SPECIES_KEYS` (`lib/extract.js`), the allowed list in `lib/prompts.js`, and
    a label + colour in `src/map/species.js`.
 
+   The `detection_methods` vocabulary (`visual | hydrophone | webcam`) has the
+   same shape on a smaller scale: described in `lib/prompts.js`, enforced in
+   `DETECTION_METHODS` (`lib/extract.js`), badged in
+   `src/components/SightingPanel.vue`.
+
    Ingest carries the same guard: unrecognised banners and any species the
    model returns outside the vocabulary both land in the newsletter's
    `error_message`, visible in the admin Notes column.
@@ -98,6 +103,13 @@ identical code path.
    Each phase logs with elapsed time — per-chunk extraction progress, then
    geocoding, then the insert. Expect minutes: the dry-run's chunk count is the
    number of Claude calls, three of which run concurrently.
+
+   It refuses, before making any API call, if a newsletter with the same
+   publication date is already `complete` or `processing` — the latter is what
+   stops a second launch while one is still running. Every invocation mints a
+   fresh UUID, so without that guard a re-run silently creates a duplicate
+   newsletter and several hundred duplicate sightings. Pass `--force` only when
+   you genuinely intend a second copy.
 
 5. **Resolve locations** at `/admin`:
    - **Catalog first.** Pending candidates are ordered by `hit_count`, and each
@@ -115,6 +127,22 @@ delete from newsletters where status in ('failed', 'processing');
 
 That cascades to any sightings the run did write. Don't run it while an ingest
 is genuinely in flight.
+
+## Landmarks (GNIS reference layer)
+
+Authoritative marine features (USGS GNIS) live in the `landmarks` table —
+distinct from the gazetteer, which is a geocoding cache keyed on reporter
+text. They feed a free geocoding stage after the gazetteer and anchor-seed
+the AI geocoding prompt. To refresh or extend (new state file, updated data):
+
+```
+node scripts/import-landmarks.mjs path/to/DomesticNames_WA.txt prod
+```
+
+Idempotent on `gnis_id`. Class list and bbox live at the top of the script;
+GNIS quirks (passages file under Bay, reefs under Bar, no Harbor class) are
+documented in [docs/architecture.md](docs/architecture.md) §12. Canadian
+features (CGNDB) are v2, `source='cgndb'`.
 
 ## Build order (spec §9)
 

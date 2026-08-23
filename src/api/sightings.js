@@ -5,11 +5,15 @@
 import { fakeSightingsGeojson } from '../dev/fake-sightings.js';
 
 /**
- * @param {{ from?: string, to?: string, species?: string[] }} params
+ * @param {{ newsletter?: string, from?: string, to?: string, species?: string[] }} params
+ *   newsletter: a uuid, or 'latest' for the most recent issue. Passing it
+ *   scopes the payload to one newsletter and makes the response carry
+ *   `newsletter` and `range` (the archive's full date span).
  * @returns {Promise<{ data: object, source: 'api' | 'fake' }>}
  */
 export async function fetchSightings(params = {}) {
   const qs = new URLSearchParams();
+  if (params.newsletter) qs.set('newsletter', params.newsletter);
   if (params.from) qs.set('from', params.from);
   if (params.to) qs.set('to', params.to);
   if (params.species?.length) qs.set('species', params.species.join(','));
