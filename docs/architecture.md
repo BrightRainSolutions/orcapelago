@@ -829,3 +829,42 @@ twice.
 One knock-on remains, unchanged for now: queue rows inherit `text-transform:
 uppercase` from the same rule, which is why raw location strings are shouted.
 It matches the visual language, so it stays until you decide otherwise.
+
+## 16. Making the data truly spatial (added 2026-08-23)
+
+PostGIS 3.6 is installed (migration 004). That was the easy half: the
+extension alone changes nothing, because `sightings.lat`/`lng` are still plain
+numerics and nothing knows what a coordinate *means*. Four pieces of data work
+stand between here and honest proximity answers, roughly in order.
+
+**1. A geometry column.** A generated `geography(Point,4326)` derived from
+lat/lng, plus a GiST index. Generated so it cannot drift from the numerics the
+rest of the app writes, and so no ingest code changes. This is what turns
+`ST_DWithin(...)` into an indexed lookup instead of a table scan, and it is the
+only step that is purely mechanical.
+
+**2. Uncertainty, per row.** A position from `gps` is metres-accurate; one from
+`ai` is a guess from a phrase, and two near-identical phrasings have landed
+tens of kilometres apart. A proximity query that treats those as equivalent is
+wrong in a way no amount of PostGIS fixes. The fix is a radius column derived
+from `geo_method` — small for gps/manual/catalog/landmark, large and honest for
+ai — so "within 2 km of X" can mean "whose uncertainty circle intersects 2 km
+of X", and answers can state their own confidence.
+
+**3. The referent: whale or whale-seer.** Recorded at §12 and still unsolved.
+One lat/lng column currently holds four different meanings — the observer's
+vantage ("Ballard Elks patio"), the sensor ("Andrews Bay hydrophone"), the
+water a camera watches, and the animal itself ("2 miles NW of Fox Spit").
+Spatial analysis over a mixture of those is measuring the wrong thing: a
+density map of shore reports is a map of *people*. This needs a column, and the
+signal is already in the text the extractor reads — a patio, a park bench and a
+lighthouse are places people stand, not places whales swim.
+
+**4. A water mask.** With a coastline or water polygon loaded, `ST_Contains`
+answers "is this position in the water" — which flags the visibly wrong
+(a whale drawn on a building) and, combined with (3), distinguishes it from the
+legitimately-on-land (a shore observer, correctly placed). It also gives the
+review queue a ruthless sort order: impossible positions first.
+
+Only (1) is mechanical. (2) and (3) are modelling decisions, and (3) is the one
+that makes the difference between a map that looks right and one that is right.
