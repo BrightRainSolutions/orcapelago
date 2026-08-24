@@ -22,7 +22,14 @@ export default async () => {
     const rows = await sql`
       select name, feature_class, lat, lng
       from landmarks
-      where feature_class <> 'Sea'
+      -- ALLOW-LIST, mirroring LANDMARK_BANDS in src/map/landmark-layers.js.
+      -- Was a deny-list on 'Sea', which worked only because every other class
+      -- in the table happened to be labellable. Populated places are imported
+      -- now for AI anchoring, and the map must never show them: the basemap
+      -- already labels towns, and these would double every one of them.
+      -- The band filter would drop them client-side anyway; this stops them
+      -- being shipped at all.
+      where feature_class in ('Bay', 'Channel', 'Island', 'Cape', 'Beach', 'Bar', 'Cliff', 'Pillar', 'Gut')
       order by feature_class, name`;
 
     return Response.json(

@@ -22,7 +22,13 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { neon } from '@neondatabase/serverless';
 
-const CLASSES = new Set(['Bay', 'Cape', 'Island', 'Bar', 'Beach', 'Cliff', 'Pillar', 'Gut', 'Channel', 'Sea']);
+// Water features label the map AND resolve positions; populated places do
+// neither — they are imported solely to anchor the AI geocoder, which is why
+// lib/geocode.js filters stage 2b to WATER_CLASSES and get-landmarks.mjs
+// ships only the labellable classes. Re-running is safe: the insert ends in
+// `on conflict (gnis_id) do nothing`, and sightings.landmark_id is a NO
+// ACTION foreign key, so existing rows must keep their ids.
+const CLASSES = new Set(['Bay', 'Cape', 'Island', 'Bar', 'Beach', 'Cliff', 'Pillar', 'Gut', 'Channel', 'Sea', 'Populated Place']);
 const BBOX = { latMin: 46.9, latMax: 50.0, lngMin: -125.5, lngMax: -121.9 };
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
