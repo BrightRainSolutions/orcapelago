@@ -1,4 +1,4 @@
-# Ask Orca — rules of the road
+# Ask Orca — domain rules
 
 Sent with the DDL on every Ask Orca call. The DDL says what the columns are;
 this says where the data came from, how it was made, and what it therefore
