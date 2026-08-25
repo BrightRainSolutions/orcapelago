@@ -1,0 +1,1569 @@
+{
+ "generated_for": "August 21, 2026 WS Report",
+ "proposals": [
+  {
+   "location_raw": "the Ram",
+   "ids": [
+    "1647dc91-0228-49f1-a971-6bca8661c4cd",
+    "87c61279-f05c-484b-8393-7b8fcbddb017"
+   ],
+   "before": {
+    "lat": 47.2985,
+    "lng": -122.4655
+   },
+   "lat": 48.452,
+   "lng": -122.972,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Outside Tyee, near Hylebos waterway",
+   "ids": [
+    "ce53df6c-b662-4868-bfb5-dc8cb7ced07b"
+   ],
+   "before": {
+    "lat": 47.285,
+    "lng": -122.42
+   },
+   "lat": 47.278,
+   "lng": -122.389,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Tyee Marina",
+   "ids": [
+    "c6297583-a71a-4bf5-ab97-612f6d303f11",
+    "317626ff-3aa6-41d9-a5bb-d83b07cc2b5b",
+    "5ee3b57a-495f-4f9e-bfea-fcad3ddaa636"
+   ],
+   "before": {
+    "lat": 47.299,
+    "lng": -122.46
+   },
+   "lat": 47.277,
+   "lng": -122.388,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Fort Ebey",
+   "ids": [
+    "dde810d4-6d03-43c6-b2e1-82b6ee43d701"
+   ],
+   "before": {
+    "lat": 48.22,
+    "lng": -122.76
+   },
+   "lat": 48.221,
+   "lng": -122.762,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Cattle Point, close to Shore",
+   "ids": [
+    "2d39ff3e-cc5a-4f9b-8633-657ad18c5be7"
+   ],
+   "before": {
+    "lat": 48.4504,
+    "lng": -122.963
+   },
+   "lat": 48.451,
+   "lng": -122.964,
+   "method": "ai"
+  },
+  {
+   "location_raw": "about 3 miles south of Cattle Point",
+   "ids": [
+    "da619472-6570-4e52-b534-4546451b756d"
+   ],
+   "before": {
+    "lat": 48.407,
+    "lng": -122.963
+   },
+   "lat": 48.406,
+   "lng": -122.963,
+   "method": "ai"
+  },
+  {
+   "location_raw": "mid channel, heading to Salmon Bank, viewed from South Beach",
+   "ids": [
+    "b9be3939-9abf-42e9-972a-8eebc194c945"
+   ],
+   "before": {
+    "lat": 48.44,
+    "lng": -122.958
+   },
+   "lat": 48.438,
+   "lng": -122.968,
+   "method": "ai"
+  },
+  {
+   "location_raw": "up north (webcam)",
+   "ids": [
+    "70693b9f-5c38-4d23-927f-324b159e6145"
+   ],
+   "before": {
+    "lat": 48.53,
+    "lng": -123.16
+   },
+   "lat": 48.525,
+   "lng": -123.158,
+   "method": "ai"
+  },
+  {
+   "location_raw": "past the lighthouse continuing northbound (webcam)",
+   "ids": [
+    "664bbcaa-0c7e-4d0e-a79b-1e36edd2e176"
+   ],
+   "before": {
+    "lat": 48.525,
+    "lng": -123.157
+   },
+   "lat": 48.525,
+   "lng": -123.155,
+   "method": "ai"
+  },
+  {
+   "location_raw": "south of Lime Kiln lighthouse",
+   "ids": [
+    "cb3924f4-3c17-4bcb-aa7d-c3d7325c2745"
+   ],
+   "before": {
+    "lat": 48.509,
+    "lng": -123.152
+   },
+   "lat": 48.508,
+   "lng": -123.155,
+   "method": "ai"
+  },
+  {
+   "location_raw": "heading up San Juan Island, leaders visible on Lime Kiln webcam",
+   "ids": [
+    "d4d33702-c0d4-4c3b-9753-49cbbb2c1ff1"
+   ],
+   "before": {
+    "lat": 48.52,
+    "lng": -123.154
+   },
+   "lat": 48.517,
+   "lng": -123.16,
+   "method": "ai"
+  },
+  {
+   "location_raw": "just off Vancouver Island, Strait of Juan de Fuca",
+   "ids": [
+    "c66f8655-b20e-409f-81fb-3f7c9db554da"
+   ],
+   "before": {
+    "lat": 48.38,
+    "lng": -123.2
+   },
+   "lat": 48.37,
+   "lng": -123.2,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Lime Kiln hydrophone",
+   "ids": [
+    "4636067e-3eaa-475d-82a0-6b72aaf13a9b"
+   ],
+   "before": {
+    "lat": 48.516,
+    "lng": -123.153
+   },
+   "lat": 48.516,
+   "lng": -123.158,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Lime Kiln hydrophone area",
+   "ids": [
+    "5790af03-d492-4c93-855a-7622b3bc53e8"
+   ],
+   "before": {
+    "lat": 48.516,
+    "lng": -123.153
+   },
+   "lat": 48.516,
+   "lng": -123.158,
+   "method": "ai"
+  },
+  {
+   "location_raw": "hydrophone",
+   "ids": [
+    "52519593-6e4f-4fd4-8137-4cecaea9b12d"
+   ],
+   "before": {
+    "lat": 48.516,
+    "lng": -123.153
+   },
+   "lat": 48.516,
+   "lng": -123.158,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Andrews Bay hydrophone",
+   "ids": [
+    "4d431c6e-7283-40c0-8f47-98e0b05476cf"
+   ],
+   "before": {
+    "lat": 48.5486,
+    "lng": -123.1636
+   },
+   "lat": 48.549,
+   "lng": -123.164,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Active Pass, BC (shore of Galiano Island)",
+   "ids": [
+    "656749b6-1a7e-4687-9fc4-8892330bc703"
+   ],
+   "before": {
+    "lat": 48.872,
+    "lng": -123.32
+   },
+   "lat": 48.868,
+   "lng": -123.298,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Hazel Point on Coyle peninsula side, just south of Bangor",
+   "ids": [
+    "0da56f38-ef27-4eca-80bd-2873bef96bee"
+   ],
+   "before": {
+    "lat": 47.6931,
+    "lng": -122.771
+   },
+   "lat": 47.693,
+   "lng": -122.771,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Lofall, Hood Canal",
+   "ids": [
+    "1abe3635-c10a-40b2-8ba8-279f5fdb73c3"
+   ],
+   "before": {
+    "lat": 47.73,
+    "lng": -122.84
+   },
+   "lat": 47.737,
+   "lng": -122.695,
+   "method": "ai"
+  },
+  {
+   "location_raw": "just north of Bangor, Hood Canal",
+   "ids": [
+    "76948e05-2ef1-4440-92f9-56c063506019"
+   ],
+   "before": {
+    "lat": 47.715,
+    "lng": -122.76
+   },
+   "lat": 47.724,
+   "lng": -122.748,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Hood Canal bridge",
+   "ids": [
+    "8671f80e-0d3c-4ada-a08c-bac54cc066a9"
+   ],
+   "before": {
+    "lat": 47.8558,
+    "lng": -122.6339
+   },
+   "lat": 47.855,
+   "lng": -122.627,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Hood Canal, spread across channel almost to the bridge",
+   "ids": [
+    "b9184aea-c864-4e97-ac48-a9bfcc2c0069"
+   ],
+   "before": {
+    "lat": 47.84,
+    "lng": -122.7
+   },
+   "lat": 47.84,
+   "lng": -122.64,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Hood Head, Hood Canal",
+   "ids": [
+    "8a2bcdce-85bf-471d-9863-47249ae50a38"
+   ],
+   "before": {
+    "lat": 47.8843,
+    "lng": -122.6207
+   },
+   "lat": 47.868,
+   "lng": -122.66,
+   "method": "ai"
+  },
+  {
+   "location_raw": "west side near Twin Spits, north of Shine Tidelands, Hood Canal",
+   "ids": [
+    "bf873923-480b-4904-9fa3-272a02f6b411"
+   ],
+   "before": {
+    "lat": 47.9268,
+    "lng": -122.6132
+   },
+   "lat": 47.932,
+   "lng": -122.617,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Oak Bay, Port Ludlow, near Olele Point",
+   "ids": [
+    "259d0684-4afc-47a1-bfba-f36a5b0162e5"
+   ],
+   "before": {
+    "lat": 47.985,
+    "lng": -122.71
+   },
+   "lat": 47.972,
+   "lng": -122.683,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Twin Spits, Hood Canal",
+   "ids": [
+    "9b53f9b5-d25f-405a-b839-8cceb15ba28a"
+   ],
+   "before": {
+    "lat": 47.9268,
+    "lng": -122.6132
+   },
+   "lat": 47.927,
+   "lng": -122.613,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Heart of Camano State Park, Saratoga Passage",
+   "ids": [
+    "1b3e33e8-40de-472a-ad59-a0975e0543e7"
+   ],
+   "before": {
+    "lat": 48.115,
+    "lng": -122.505
+   },
+   "lat": 48.117,
+   "lng": -122.5,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Elger Bay area, Camano side, Saratoga Passage",
+   "ids": [
+    "d3139cb3-bc82-439c-bb8e-3ddd3629e9f1"
+   ],
+   "before": {
+    "lat": 48.1248,
+    "lng": -122.4717
+   },
+   "lat": 48.152,
+   "lng": -122.508,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Saratoga Passage, mid channel, moving toward Langley",
+   "ids": [
+    "3c1eda72-b9c8-4b58-a85e-c728b8e48d9d"
+   ],
+   "before": {
+    "lat": 48.18,
+    "lng": -122.52
+   },
+   "lat": 48.04,
+   "lng": -122.44,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Whidbey side of mid channel, Saratoga Passage, near Glendale",
+   "ids": [
+    "235a72d1-61c7-4672-af28-a4f85a6fe933"
+   ],
+   "before": {
+    "lat": 48.16,
+    "lng": -122.54
+   },
+   "lat": 48.108,
+   "lng": -122.455,
+   "method": "ai"
+  },
+  {
+   "location_raw": "just south of Glen Cove on the Key Peninsula side",
+   "ids": [
+    "e425b33e-0b5b-43e6-a39a-d2a6d8c46cd7"
+   ],
+   "before": {
+    "lat": 47.335,
+    "lng": -122.73
+   },
+   "lat": 47.268,
+   "lng": -122.7,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Whidbey side of mid channel, Saratoga Passage, viewed from Glendale",
+   "ids": [
+    "243752e0-02c4-481d-9c89-a178e73616d3"
+   ],
+   "before": {
+    "lat": 48.16,
+    "lng": -122.535
+   },
+   "lat": 48.108,
+   "lng": -122.455,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Directly west of Lighthouse Park, far west edge of channel, Saratoga Passage",
+   "ids": [
+    "1b3072da-35cc-4eb1-95e5-2bdf722eeb37"
+   ],
+   "before": {
+    "lat": 48.07,
+    "lng": -122.53
+   },
+   "lat": 48.129,
+   "lng": -122.52,
+   "method": "ai"
+  },
+  {
+   "location_raw": "past Clinton, Whidbey side, Saratoga Passage",
+   "ids": [
+    "62860425-803b-450c-a17c-6871b308eaf2"
+   ],
+   "before": {
+    "lat": 48.02,
+    "lng": -122.495
+   },
+   "lat": 47.985,
+   "lng": -122.368,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Clinton",
+   "ids": [
+    "33db47cd-f76d-4481-96b5-0588b58ef764"
+   ],
+   "before": {
+    "lat": 47.98,
+    "lng": -122.353
+   },
+   "lat": 47.978,
+   "lng": -122.357,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Whidbey side of channel, just north of Clinton ferry dock, Saratoga Passage",
+   "ids": [
+    "22193ba5-82d0-4d73-ad77-65e413c16831"
+   ],
+   "before": {
+    "lat": 48.005,
+    "lng": -122.42
+   },
+   "lat": 47.985,
+   "lng": -122.365,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Sunrise Beach neighborhood, Saratoga Passage",
+   "ids": [
+    "9c80c939-6015-4a11-9255-93a6023a623b"
+   ],
+   "before": {
+    "lat": 48.05,
+    "lng": -122.46
+   },
+   "lat": 48.129,
+   "lng": -122.477,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Langley Marina, mid channel, Saratoga Passage",
+   "ids": [
+    "8f70d896-5b3f-41be-ad9c-09c529552523"
+   ],
+   "before": {
+    "lat": 48.043,
+    "lng": -122.51
+   },
+   "lat": 48.042,
+   "lng": -122.43,
+   "method": "ai"
+  },
+  {
+   "location_raw": "1 mile north of Langley, Saratoga Passage",
+   "ids": [
+    "59817656-e100-4c71-8109-0a1cb60780d9"
+   ],
+   "before": {
+    "lat": 48.0575,
+    "lng": -122.5
+   },
+   "lat": 48.057,
+   "lng": -122.405,
+   "method": "ai"
+  },
+  {
+   "location_raw": "slightly north of Langley, Saratoga Passage",
+   "ids": [
+    "079f9462-e385-4682-adcf-1f914926f1d1"
+   ],
+   "before": {
+    "lat": 48.048,
+    "lng": -122.49
+   },
+   "lat": 48.05,
+   "lng": -122.405,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Bells Beach, Whidbey, Saratoga Passage",
+   "ids": [
+    "01cc81bb-372e-4501-b733-7ce1ec48e002"
+   ],
+   "before": {
+    "lat": 48.08,
+    "lng": -122.48
+   },
+   "lat": 48.077,
+   "lng": -122.469,
+   "method": "ai"
+  },
+  {
+   "location_raw": "North side of East Point/Whidbey, Saratoga Passage",
+   "ids": [
+    "a242df54-7234-4930-ab71-65045dcc66ee"
+   ],
+   "before": {
+    "lat": 48.1,
+    "lng": -122.48
+   },
+   "lat": 48.102,
+   "lng": -122.479,
+   "method": "ai"
+  },
+  {
+   "location_raw": "south west of Baby Island, Whidbey side, Saratoga Passage",
+   "ids": [
+    "319fb98b-9a26-48a0-98a7-375b7f3158e2"
+   ],
+   "before": {
+    "lat": 48.095,
+    "lng": -122.535
+   },
+   "lat": 48.092,
+   "lng": -122.535,
+   "method": "ai"
+  },
+  {
+   "location_raw": "1.5 miles north of Hidden Beach, off Whidbey shore, Saratoga Passage",
+   "ids": [
+    "4484dabf-d586-4313-afdb-66f7ba066386"
+   ],
+   "before": {
+    "lat": 48.1506,
+    "lng": -122.5628
+   },
+   "lat": 48.151,
+   "lng": -122.563,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Around Anderson Island",
+   "ids": [
+    "b3f880d3-df71-438b-962d-31f6cb7bbdac"
+   ],
+   "before": {
+    "lat": 47.1598,
+    "lng": -122.7062
+   },
+   "lat": 47.16,
+   "lng": -122.706,
+   "method": "ai"
+  },
+  {
+   "location_raw": "heading towards Fox Island pier",
+   "ids": [
+    "3220e36f-5e9f-4fca-b364-905ef35de152"
+   ],
+   "before": {
+    "lat": 47.261,
+    "lng": -122.64
+   },
+   "lat": 47.248,
+   "lng": -122.624,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Carr Inlet, Horsehead Bay",
+   "ids": [
+    "32a41760-b0a6-44c3-abce-bc2633e7a0e9"
+   ],
+   "before": {
+    "lat": 47.2955,
+    "lng": -122.6847
+   },
+   "lat": 47.295,
+   "lng": -122.685,
+   "method": "ai"
+  },
+  {
+   "location_raw": "right in front of Anderson Nisqually Reach side",
+   "ids": [
+    "49521d0c-f71a-4180-97fd-e320d4e7a924"
+   ],
+   "before": {
+    "lat": 47.145,
+    "lng": -122.72
+   },
+   "lat": 47.167,
+   "lng": -122.73,
+   "method": "ai"
+  },
+  {
+   "location_raw": "In front of Oro Bay sb [southbound]",
+   "ids": [
+    "403d883a-fe72-4377-afe2-8b8e192b66fd"
+   ],
+   "before": {
+    "lat": 47.1384,
+    "lng": -122.7004
+   },
+   "lat": 47.145,
+   "lng": -122.697,
+   "method": "ai"
+  },
+  {
+   "location_raw": "between Ketron and Anderson Island",
+   "ids": [
+    "2fbeffb2-407c-4cc1-9df3-3488a58771f1"
+   ],
+   "before": {
+    "lat": 47.14,
+    "lng": -122.68
+   },
+   "lat": 47.137,
+   "lng": -122.678,
+   "method": "ai"
+  },
+  {
+   "location_raw": "just south of the ferry path, watched from the Anderson Island ferry",
+   "ids": [
+    "e2d9180f-10ed-4fc5-b5ac-c50d1c3b3183"
+   ],
+   "before": {
+    "lat": 47.155,
+    "lng": -122.705
+   },
+   "lat": 47.179,
+   "lng": -122.671,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Heading more south past McNeil",
+   "ids": [
+    "10992dd0-f926-44b4-8872-068ff98cd3fb"
+   ],
+   "before": {
+    "lat": 47.19,
+    "lng": -122.685
+   },
+   "lat": 47.195,
+   "lng": -122.69,
+   "method": "ai"
+  },
+  {
+   "location_raw": "off the prison, headed south",
+   "ids": [
+    "19c09ae2-0c86-4c66-868d-9bcbb49dd49e"
+   ],
+   "before": {
+    "lat": 47.21,
+    "lng": -122.685
+   },
+   "lat": 47.208,
+   "lng": -122.692,
+   "method": "ai"
+  },
+  {
+   "location_raw": "in front of McNeil, middle of it where boats are, heading south. Viewing from Steilacoom Park",
+   "ids": [
+    "f5bfbcb5-8f7e-4262-84a3-7dd0b68c2d80"
+   ],
+   "before": {
+    "lat": 47.225,
+    "lng": -122.685
+   },
+   "lat": 47.213,
+   "lng": -122.688,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Heading west along McNeil pretty quickly now. Close to the beach on McNeil.",
+   "ids": [
+    "c13688aa-5630-449d-abf7-2a92e807eece"
+   ],
+   "before": {
+    "lat": 47.22,
+    "lng": -122.705
+   },
+   "lat": 47.215,
+   "lng": -122.71,
+   "method": "ai"
+  },
+  {
+   "location_raw": "little island called Gertrude off of McNeil Island",
+   "ids": [
+    "f791dbd8-c408-4644-ba0c-3fdb3d3acf41"
+   ],
+   "before": {
+    "lat": 47.2185,
+    "lng": -122.702
+   },
+   "lat": 47.228,
+   "lng": -122.7,
+   "method": "ai"
+  },
+  {
+   "location_raw": "continuing south in Carr, close to Fox Island side. Viewing from Bella",
+   "ids": [
+    "97ef5427-5ea9-4d23-a34b-c15ff5c7a531"
+   ],
+   "before": {
+    "lat": 47.248,
+    "lng": -122.66
+   },
+   "lat": 47.26,
+   "lng": -122.638,
+   "method": "ai"
+  },
+  {
+   "location_raw": "about to reach the south end of Green Point, southbound",
+   "ids": [
+    "a80c12ab-7554-4cc8-948f-0fef4ca50021"
+   ],
+   "before": {
+    "lat": 47.276,
+    "lng": -122.6937
+   },
+   "lat": 47.278,
+   "lng": -122.694,
+   "method": "ai"
+  },
+  {
+   "location_raw": "SW [southwest] of Cutts, from Raft Island",
+   "ids": [
+    "74f8f4ae-9ed0-4f29-99f8-45adbabf3c5a"
+   ],
+   "before": {
+    "lat": 47.278,
+    "lng": -122.705
+   },
+   "lat": 47.322,
+   "lng": -122.68,
+   "method": "ai"
+  },
+  {
+   "location_raw": "mid channel, headed SW [southwest] cruising",
+   "ids": [
+    "632eea81-737f-47e1-b07a-3f7188c214f6"
+   ],
+   "before": {
+    "lat": 47.2557,
+    "lng": -122.6859
+   },
+   "lat": 47.28,
+   "lng": -122.7,
+   "method": "ai"
+  },
+  {
+   "location_raw": "grouped up and sb [southbound]",
+   "ids": [
+    "c888c56f-261c-42bd-9604-e224504c1189"
+   ],
+   "before": {
+    "lat": 47.25,
+    "lng": -122.68
+   },
+   "lat": 47.27,
+   "lng": -122.62,
+   "method": "ai"
+  },
+  {
+   "location_raw": "across from Kopachuck Park",
+   "ids": [
+    "aa17c224-369b-49fa-ad8e-7cdadd78ff72"
+   ],
+   "before": {
+    "lat": 47.322,
+    "lng": -122.675
+   },
+   "lat": 47.315,
+   "lng": -122.665,
+   "method": "ai"
+  },
+  {
+   "location_raw": "bluff above Minter",
+   "ids": [
+    "1aecbfad-3c6f-463b-9078-b5eb43735c7c"
+   ],
+   "before": {
+    "lat": 47.36,
+    "lng": -122.715
+   },
+   "lat": 47.345,
+   "lng": -122.642,
+   "method": "ai"
+  },
+  {
+   "location_raw": "right with the whale boat, trending southbound",
+   "ids": [
+    "4989b8a8-52cf-41dc-82c7-cf09b3c42778"
+   ],
+   "before": {
+    "lat": 47.29,
+    "lng": -122.69
+   },
+   "lat": 47.29,
+   "lng": -122.66,
+   "method": "ai"
+  },
+  {
+   "location_raw": "just south of Kopachuck",
+   "ids": [
+    "da2b0951-5a19-47a6-b105-df54cfc540c5"
+   ],
+   "before": {
+    "lat": 47.31,
+    "lng": -122.68
+   },
+   "lat": 47.305,
+   "lng": -122.668,
+   "method": "ai"
+  },
+  {
+   "location_raw": "heading south",
+   "ids": [
+    "66c9b423-0c2e-4cdd-9b9b-777c158aefca"
+   ],
+   "before": {
+    "lat": 47.28,
+    "lng": -122.686
+   },
+   "lat": 47.28,
+   "lng": -122.66,
+   "method": "ai"
+  },
+  {
+   "location_raw": "in front of Kopachuck closer to Gig Harbor side",
+   "ids": [
+    "b6adba5c-5a6b-4f23-9af5-9237e5dbd143"
+   ],
+   "before": {
+    "lat": 47.322,
+    "lng": -122.66
+   },
+   "lat": 47.316,
+   "lng": -122.655,
+   "method": "ai"
+  },
+  {
+   "location_raw": "closer to Longbranch side of channel, heading slowly further north into Carr lining up with Horsehead area",
+   "ids": [
+    "b76453c8-9fd5-41a0-9514-80f30a1cef75"
+   ],
+   "before": {
+    "lat": 47.265,
+    "lng": -122.71
+   },
+   "lat": 47.235,
+   "lng": -122.724,
+   "method": "ai"
+  },
+  {
+   "location_raw": "heading further into Carr still closer to Fox Island, viewing from Bella",
+   "ids": [
+    "c37bcbb1-e613-4bb9-b3f8-229af7bde831"
+   ],
+   "before": {
+    "lat": 47.26,
+    "lng": -122.67
+   },
+   "lat": 47.255,
+   "lng": -122.698,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Headed west down Carr Inlet, visible from Fox Island",
+   "ids": [
+    "cc43c326-6937-4fee-8ee1-4e5e92e34c51"
+   ],
+   "before": {
+    "lat": 47.25,
+    "lng": -122.69
+   },
+   "lat": 47.245,
+   "lng": -122.71,
+   "method": "ai"
+  },
+  {
+   "location_raw": "past a tiny little island, still nb [northbound]",
+   "ids": [
+    "9369d4e8-a8f0-429c-b117-a61e9c6bbb31"
+   ],
+   "before": {
+    "lat": 47.285,
+    "lng": -122.688
+   },
+   "lat": 47.27,
+   "lng": -122.655,
+   "method": "ai"
+  },
+  {
+   "location_raw": "deeper into Carr, closer to Fox Island side",
+   "ids": [
+    "6728bee9-c247-41d4-88fd-1bbccbc16afe"
+   ],
+   "before": {
+    "lat": 47.27,
+    "lng": -122.665
+   },
+   "lat": 47.27,
+   "lng": -122.648,
+   "method": "ai"
+  },
+  {
+   "location_raw": "heading toward Carr inlet on the west side of Fox Island, viewed from Chambers Bay",
+   "ids": [
+    "c787e487-7866-435b-a720-fad984bdaca7"
+   ],
+   "before": {
+    "lat": 47.235,
+    "lng": -122.64
+   },
+   "lat": 47.23,
+   "lng": -122.66,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Toliva Shoal buoy, heading into Carr Inlet",
+   "ids": [
+    "10e2fbff-47b5-4a66-8225-86fda02fb575"
+   ],
+   "before": {
+    "lat": 47.204,
+    "lng": -122.6074
+   },
+   "lat": 47.204,
+   "lng": -122.6074,
+   "method": "ai"
+  },
+  {
+   "location_raw": "mid channel between CB [Chambers Bay] and McNeil",
+   "ids": [
+    "faf33f05-43e0-4fbf-9a39-573b348861c2"
+   ],
+   "before": {
+    "lat": 47.1982,
+    "lng": -122.6435
+   },
+   "lat": 47.213,
+   "lng": -122.648,
+   "method": "ai"
+  },
+  {
+   "location_raw": "between McNeil and Fox Island",
+   "ids": [
+    "93d32866-5530-4012-b5fa-1fc3b716d023"
+   ],
+   "before": {
+    "lat": 47.2272,
+    "lng": -122.655
+   },
+   "lat": 47.243,
+   "lng": -122.675,
+   "method": "ai"
+  },
+  {
+   "location_raw": "headed north at a leisurely pace, viewed from ferry terminal at Steilacoom",
+   "ids": [
+    "40941cd6-a67d-4f3a-b4b0-9e8e1dfe19df"
+   ],
+   "before": {
+    "lat": 47.172,
+    "lng": -122.66
+   },
+   "lat": 47.172,
+   "lng": -122.635,
+   "method": "ai"
+  },
+  {
+   "location_raw": "just past Ketron, viewed from Steilacoom",
+   "ids": [
+    "cd2054ba-e659-4a1e-8323-4be0904a56f8"
+   ],
+   "before": {
+    "lat": 47.165,
+    "lng": -122.65
+   },
+   "lat": 47.175,
+   "lng": -122.654,
+   "method": "ai"
+  },
+  {
+   "location_raw": "visible from Saltars",
+   "ids": [
+    "e8c661a0-46e9-424e-98b3-2e00cb0aa138"
+   ],
+   "before": {
+    "lat": 47.198,
+    "lng": -122.67
+   },
+   "lat": 47.168,
+   "lng": -122.645,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Jack had cleared Ketron but family lingering near Cole Point and Sandy Point on Anderson Island",
+   "ids": [
+    "0a7905f5-8dca-41e9-8e6a-89cd06d88166"
+   ],
+   "before": {
+    "lat": 47.1468,
+    "lng": -122.6751
+   },
+   "lat": 47.147,
+   "lng": -122.68,
+   "method": "ai"
+  },
+  {
+   "location_raw": "between AI [Anderson Island] and Ketron but closer to the Ketron side mid channel, heading north",
+   "ids": [
+    "970746ab-31fb-468a-ba3d-767de2a7be59"
+   ],
+   "before": {
+    "lat": 47.165,
+    "lng": -122.655
+   },
+   "lat": 47.168,
+   "lng": -122.664,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Cole Point, headed north",
+   "ids": [
+    "7c1f78f0-69cb-4134-9596-c7b08c1b5a6c"
+   ],
+   "before": {
+    "lat": 47.1432,
+    "lng": -122.6762
+   },
+   "lat": 47.1432,
+   "lng": -122.6762,
+   "method": "ai"
+  },
+  {
+   "location_raw": "inside Oro Bay",
+   "ids": [
+    "21803c54-4e27-4a07-abb7-c518d6e7d206"
+   ],
+   "before": {
+    "lat": 47.172,
+    "lng": -122.702
+   },
+   "lat": 47.145,
+   "lng": -122.72,
+   "method": "ai"
+  },
+  {
+   "location_raw": "stalled a little in Oro Bay, following contours of the island after a successful meal",
+   "ids": [
+    "5100da88-68e4-47af-a178-e533109af3f1"
+   ],
+   "before": {
+    "lat": 47.173,
+    "lng": -122.705
+   },
+   "lat": 47.143,
+   "lng": -122.718,
+   "method": "ai"
+  },
+  {
+   "location_raw": "between Anderson and Ketron, viewed from Nisqually",
+   "ids": [
+    "063a3249-3514-4ddd-9c0c-0e436ef0af00"
+   ],
+   "before": {
+    "lat": 47.162,
+    "lng": -122.67
+   },
+   "lat": 47.165,
+   "lng": -122.68,
+   "method": "ai"
+  },
+  {
+   "location_raw": "near previous pin but closer to the mainland shore",
+   "ids": [
+    "36d93299-a53a-4c26-ad58-e2d3cdab1e06"
+   ],
+   "before": {
+    "lat": 47.165,
+    "lng": -122.64
+   },
+   "lat": 47.165,
+   "lng": -122.66,
+   "method": "ai"
+  },
+  {
+   "location_raw": "near the pin, viewed from Tolmie",
+   "ids": [
+    "991509df-4aa1-4b06-9892-5cc1b30477c8"
+   ],
+   "before": {
+    "lat": 47.11,
+    "lng": -122.76
+   },
+   "lat": 47.175,
+   "lng": -122.665,
+   "method": "ai"
+  },
+  {
+   "location_raw": "west across the south side of Anderson, viewing from Beachcrest",
+   "ids": [
+    "1b7f209e-d1b3-40c0-8710-2fb005c8c1a2"
+   ],
+   "before": {
+    "lat": 47.143,
+    "lng": -122.73
+   },
+   "lat": 47.14,
+   "lng": -122.73,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Nisqually, going back and forth near Anderson",
+   "ids": [
+    "8819dba6-56f3-46da-b8ed-084f254b748f"
+   ],
+   "before": {
+    "lat": 47.17,
+    "lng": -122.69
+   },
+   "lat": 47.16,
+   "lng": -122.7,
+   "method": "ai"
+  },
+  {
+   "location_raw": "South Puget Sound, Anderson Island, northeast side of Anderson Island",
+   "ids": [
+    "6a79fdbc-1de1-48c6-b3a6-297058bc17e2"
+   ],
+   "before": {
+    "lat": 47.18,
+    "lng": -122.69
+   },
+   "lat": 47.175,
+   "lng": -122.685,
+   "method": "ai"
+  },
+  {
+   "location_raw": "south of the ferry dock mid channel, Anderson Island",
+   "ids": [
+    "ab4f6a38-4554-4a10-afd6-80f4d78f394e"
+   ],
+   "before": {
+    "lat": 47.155,
+    "lng": -122.702
+   },
+   "lat": 47.155,
+   "lng": -122.688,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Lagoon Point beach",
+   "ids": [
+    "d29c797a-3356-47f1-9a5a-42c6dc12bf93"
+   ],
+   "before": {
+    "lat": 48.0726,
+    "lng": -122.6127
+   },
+   "lat": 48.0726,
+   "lng": -122.6127,
+   "method": "ai"
+  },
+  {
+   "location_raw": "View from Fort Ebey, heading to WB [westbound]",
+   "ids": [
+    "36a550c8-c04b-4a0c-8502-da3ad82511bb"
+   ],
+   "before": {
+    "lat": 48.22,
+    "lng": -122.77
+   },
+   "lat": 48.222,
+   "lng": -122.76,
+   "method": "ai"
+  },
+  {
+   "location_raw": "North Beach, Whidbey side",
+   "ids": [
+    "db9d7209-b1f5-4b5c-aa84-14fa8db8f440"
+   ],
+   "before": {
+    "lat": 48.4015,
+    "lng": -122.6554
+   },
+   "lat": 48.4015,
+   "lng": -122.6554,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Pt. [Point] Wilson",
+   "ids": [
+    "13739019-43b6-40e7-b329-4919e7a5a310"
+   ],
+   "before": {
+    "lat": 48.1468,
+    "lng": -122.755
+   },
+   "lat": 48.146,
+   "lng": -122.755,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Fort Flagler light house",
+   "ids": [
+    "ff2651b4-99a9-4056-a92f-ff2e9334e3ce"
+   ],
+   "before": {
+    "lat": 48.09,
+    "lng": -122.684
+   },
+   "lat": 48.0968,
+   "lng": -122.6952,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Marrowstone Island, mid channel",
+   "ids": [
+    "9a312b9e-a6e3-4007-9ce9-e9203777940d"
+   ],
+   "before": {
+    "lat": 48.0556,
+    "lng": -122.66
+   },
+   "lat": 48.056,
+   "lng": -122.688,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Hood Canal Bridge",
+   "ids": [
+    "26dcfe2c-f346-43c7-831f-ad6d692c17e3"
+   ],
+   "before": {
+    "lat": 47.856,
+    "lng": -122.635
+   },
+   "lat": 47.852,
+   "lng": -122.627,
+   "method": "ai"
+  },
+  {
+   "location_raw": "TRF",
+   "ids": [
+    "133de9eb-7d1f-4e96-9676-0e4381ba4e14"
+   ],
+   "before": {
+    "lat": null,
+    "lng": null
+   },
+   "lat": 47.72,
+   "lng": -122.87,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Geoduck observation deck on west side of canal",
+   "ids": [
+    "4c93d723-6a2f-4d1c-9a21-c7d1a3b2ca65"
+   ],
+   "before": {
+    "lat": 47.75,
+    "lng": -122.92
+   },
+   "lat": 47.68,
+   "lng": -122.91,
+   "method": "ai"
+  },
+  {
+   "location_raw": "across from Olympic Canal Tracts, south of Dosewallips",
+   "ids": [
+    "b4d56808-1dbb-42c9-ac96-ad12b0dfda15"
+   ],
+   "before": {
+    "lat": 47.68,
+    "lng": -122.89
+   },
+   "lat": 47.68,
+   "lng": -122.87,
+   "method": "ai"
+  },
+  {
+   "location_raw": "west side of Hood Canal just south of Dabob",
+   "ids": [
+    "4f114da7-d660-4623-8445-3552b70eff3b"
+   ],
+   "before": {
+    "lat": 47.7,
+    "lng": -122.87
+   },
+   "lat": 47.74,
+   "lng": -122.905,
+   "method": "ai"
+  },
+  {
+   "location_raw": "just north of Ayock",
+   "ids": [
+    "ac65ad41-70df-40da-8522-5a291e30de05"
+   ],
+   "before": {
+    "lat": 47.725,
+    "lng": -122.88
+   },
+   "lat": 47.64,
+   "lng": -122.905,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Ayock",
+   "ids": [
+    "10a85ac5-744d-4aa9-8fdb-94d0e230f90d",
+    "6906a8aa-a21e-4377-95dc-113df8ee0d63"
+   ],
+   "before": {
+    "lat": 47.718,
+    "lng": -122.876
+   },
+   "lat": 47.63,
+   "lng": -122.905,
+   "method": "ai"
+  },
+  {
+   "location_raw": "just south of Triton Cove",
+   "ids": [
+    "c33894ab-fb91-4483-8185-73d924fda4bd"
+   ],
+   "before": {
+    "lat": 47.599,
+    "lng": -122.9846
+   },
+   "lat": 47.598,
+   "lng": -122.979,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Holmes Harbor area",
+   "ids": [
+    "a65e7146-7a04-442d-8fc0-4695e3b08733"
+   ],
+   "before": {
+    "lat": 48.0685,
+    "lng": -122.5355
+   },
+   "lat": 48.0685,
+   "lng": -122.5355,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Whidbey side of channel, viewing from Hidden Beach",
+   "ids": [
+    "cbeca629-6e88-49eb-81d7-39fee770f218"
+   ],
+   "before": {
+    "lat": 48.1289,
+    "lng": -122.55
+   },
+   "lat": 48.129,
+   "lng": -122.535,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Onamac Point, Whidbey side of mid, pushing closer to Camano",
+   "ids": [
+    "b190f3a1-e04e-4338-9996-188b6aa9b07a"
+   ],
+   "before": {
+    "lat": 48.184,
+    "lng": -122.55
+   },
+   "lat": 48.184,
+   "lng": -122.56,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Off Harrington Lagoon in Coupeville",
+   "ids": [
+    "11757b48-d57c-472d-b29e-47fef1f2bf87"
+   ],
+   "before": {
+    "lat": 48.2097,
+    "lng": -122.6124
+   },
+   "lat": 48.2097,
+   "lng": -122.6124,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Off Harrington Lagoon on Whidbey Island headed south to Race Lagoon",
+   "ids": [
+    "eac3200d-39dd-40cc-b1e4-af3848787b6a"
+   ],
+   "before": {
+    "lat": 48.201,
+    "lng": -122.606
+   },
+   "lat": 48.2,
+   "lng": -122.606,
+   "method": "ai"
+  },
+  {
+   "location_raw": "President Point, Kingston",
+   "ids": [
+    "9073ab92-2b6e-4b14-bf60-48f6f93703d4"
+   ],
+   "before": {
+    "lat": 47.7659,
+    "lng": -122.4721
+   },
+   "lat": 47.7659,
+   "lng": -122.4721,
+   "method": "ai"
+  },
+  {
+   "location_raw": "South Puget Sound",
+   "ids": [
+    "3f59e4f6-f004-4513-b134-55a54d78fa49"
+   ],
+   "before": {
+    "lat": 47.2,
+    "lng": -122.7
+   },
+   "lat": 47.2,
+   "lng": -122.65,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Fox Island Pier, then Fox Island Bridge, then Bella Bella Beach dock",
+   "ids": [
+    "81997b6f-64e0-4b94-8077-1218cf974a0a"
+   ],
+   "before": {
+    "lat": 47.2528,
+    "lng": -122.635
+   },
+   "lat": 47.252,
+   "lng": -122.628,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Bella Bella sand spit",
+   "ids": [
+    "013ef9c4-2370-4e56-b4df-33dd22a11964"
+   ],
+   "before": {
+    "lat": 47.2538,
+    "lng": -122.647
+   },
+   "lat": 47.257,
+   "lng": -122.63,
+   "method": "ai"
+  },
+  {
+   "location_raw": "off of Fox Island",
+   "ids": [
+    "6a1b69cd-4b6d-4f2a-9e09-daad0add93a6"
+   ],
+   "before": {
+    "lat": 47.26,
+    "lng": -122.6215
+   },
+   "lat": 47.245,
+   "lng": -122.63,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Bella Bella Beach cove on Fox Island",
+   "ids": [
+    "4261805f-f9b4-4fb0-9c68-ecf84968bcc2"
+   ],
+   "before": {
+    "lat": 47.253,
+    "lng": -122.6465
+   },
+   "lat": 47.256,
+   "lng": -122.628,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Fox Island pier, between mid channel and the pier",
+   "ids": [
+    "1b6f92a7-66e0-4467-bdce-109630abc37a"
+   ],
+   "before": {
+    "lat": 47.26,
+    "lng": -122.642
+   },
+   "lat": 47.25,
+   "lng": -122.625,
+   "method": "ai"
+  },
+  {
+   "location_raw": "Half way from Fox Island Bridge and Fox Island pier (mid-channel) in Hale Passage",
+   "ids": [
+    "71d6e266-8fcc-47e4-8a2a-493e60e16a89"
+   ],
+   "before": {
+    "lat": 47.2608,
+    "lng": -122.624
+   },
+   "lat": 47.26,
+   "lng": -122.632,
+   "method": "ai"
+  },
+  {
+   "location_raw": "heading towards the Narrows by Wollochet Bay",
+   "ids": [
+    "b81f02ed-6f88-430b-b195-579f21d5d685"
+   ],
+   "before": {
+    "lat": 47.278,
+    "lng": -122.58
+   },
+   "lat": 47.285,
+   "lng": -122.62,
+   "method": "ai"
+  },
+  {
+   "location_raw": "lighthouse just south of the bridge",
+   "ids": [
+    "2e9f4b88-e104-49d4-9a9f-f5c095a5b0c8"
+   ],
+   "before": {
+    "lat": 47.282,
+    "lng": -122.544
+   },
+   "lat": 47.282,
+   "lng": -122.543,
+   "method": "ai"
+  }
+ ]
+}
