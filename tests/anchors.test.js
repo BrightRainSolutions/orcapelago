@@ -1,6 +1,7 @@
 // Anchor seeding for AI geocoding (lib/geocode.js pickAnchors) — pure logic.
 import { describe, it, expect } from 'vitest';
 import { pickAnchors, landmarkLookup } from '../lib/geocode.js';
+import { parseJsonArray } from '../lib/extract.js';
 
 const landmarks = [
   { name: 'Protection Island', feature_class: 'Island', lat: 48.126, lng: -122.929 },
@@ -93,5 +94,29 @@ describe('landmarkLookup', () => {
 
   it('still refuses an ambiguous water name', () => {
     expect(landmarkLookup('Rocky Point', landmarks)).toBeNull();
+  });
+});
+
+describe('repairControlChars', () => {
+  const NL = String.fromCharCode(10);
+  const TAB = String.fromCharCode(9);
+
+  it('rescues a raw newline inside a JSON string value', () => {
+    const broken = '[{"input":"mid channel, headed SW' + NL + '[southwest]","lat":48.1,"lng":-122.5}]';
+    expect(() => JSON.parse(broken)).toThrow();
+    const [row] = parseJsonArray(broken);
+    expect(row.input).toContain('mid channel');
+    expect(row.lat).toBe(48.1);
+  });
+
+  it('leaves the newlines that format the JSON alone', () => {
+    const pretty = '[' + NL + '  {"input":"Penn Cove","lat":48.2}' + NL + ']';
+    expect(parseJsonArray(pretty)).toEqual([{ input: 'Penn Cove', lat: 48.2 }]);
+  });
+
+  it('handles tabs and an escaped quote in the same value', () => {
+    const broken = '[{"input":"a' + TAB + 'b \\"quoted\\" c","lat":1}]';
+    const [row] = parseJsonArray(broken);
+    expect(row.input).toBe('a' + TAB + 'b "quoted" c');
   });
 });

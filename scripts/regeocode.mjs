@@ -45,6 +45,10 @@ const all = args.includes('--all');
 const fromFile = args.includes('--from') ? args[args.indexOf('--from') + 1] : null;
 // Sample size, for buying a measurement instead of the whole job.
 const limit = args.includes('--limit') ? Number(args[args.indexOf('--limit') + 1]) : null;
+// Attempts per location, including the first. Failures here are systematic —
+// road mile markers, channel axes — so a third ask mostly re-buys the same
+// wrong answer. Two is the measured sweet spot.
+const attempts = args.includes('--attempts') ? Number(args[args.indexOf('--attempts') + 1]) : 2;
 const title = args[args.indexOf('--newsletter') + 1];
 if (!all && (!args.includes('--newsletter') || !title || title.startsWith('--'))) {
   console.error('usage: node scripts/regeocode.mjs (--all | --newsletter "<title>") [--write]');
@@ -69,6 +73,10 @@ if (fromFile) {
   console.log(`applied ${saved.proposals.length} proposals to ${n} rows from ${fromFile}`);
   process.exit(0);
 }
+// Newline as a value, not an escape: three patches to this file were silently
+// mangled by backslash handling before this existed.
+const NL = String.fromCharCode(10);
+const log = (m) => console.log(m);
 const norm = (s) => s.toLowerCase().replace(/\s+/g, ' ').trim();
 const inBounds = (lat, lng) => lat > 45 && lat < 52 && lng > -130 && lng < -120;
 
@@ -128,6 +136,33 @@ for (const [loc] of byLocation) {
   if (hit) resolved.set(loc, { lat: hit.lat, lng: hit.lng, method: 'landmark', landmark_id: hit.id });
 }
 
+/**
+ * Which of these coordinates are NOT in marine water?
+ *
+ * Returns metres-from-water keyed by location string, for the ones outside.
+ * One query for the whole set rather than a round trip per point.
+ */
+async function inlandDistances(entries) {
+  if (!entries.length) return new Map();
+  const locs = entries.map((e) => e.loc);
+  const lats = entries.map((e) => e.lat);
+  const lngs = entries.map((e) => e.lng);
+  const rows = await sql`
+    with input as (
+      select unnest(${locs}::text[]) as loc,
+             unnest(${lats}::float8[]) as lat,
+             unnest(${lngs}::float8[]) as lng
+    ), pts as (
+      select loc, st_setsrid(st_makepoint(lng, lat), 4326)::geography g from input
+    )
+    select p.loc,
+           round((select st_distance(w.geom, p.g) from water_areas_sub w
+                  order by w.geom <-> p.g limit 1)::numeric) as dist
+    from pts p
+    where not exists (select 1 from water_areas_sub w where st_covers(w.geom, p.g))`;
+  return new Map(rows.map((r) => [r.loc, Number(r.dist)]));
+}
+
 // --- stage 3: AI, anchored on the gazetteer as well as GNIS ---
 const gazAnchors = gazetteer.flatMap((g) => [
   { name: g.name, feature_class: 'verified place', lat: g.lat, lng: g.lng },
@@ -163,6 +198,75 @@ async function runBatch(batch) {
 }
 for (let i = 0; i < batches.length; i += 3) {
   await Promise.all(batches.slice(i, i + 3).map(runBatch));
+}
+
+// --- retry: the model is TOLD the answer was on land, and asked again ---
+//
+// The prompt has always asked for a coordinate on the water and has never
+// been checked. This closes that loop mechanically: anything the water mask
+// rejects goes back with its own failure quoted at it.
+//
+// Retries are capped and the outcome is kept only if it is an improvement,
+// so a retry can never make a position worse than the one it replaced.
+for (let attempt = 2; attempt <= attempts; attempt++) {
+  const placed = [...resolved.entries()]
+    .filter(([, r]) => r.method === 'ai')
+    .map(([loc, r]) => ({ loc, lat: r.lat, lng: r.lng }));
+  const inland = await inlandDistances(placed);
+  const retryable = placed.filter((p) => inland.get(p.loc) > 0);
+  if (!retryable.length) break;
+
+  log(`attempt ${attempt}: ${retryable.length} of ${placed.length} landed outside water`);
+  const retryBatches = [];
+  for (let i = 0; i < retryable.length; i += 60) retryBatches.push(retryable.slice(i, i + 60));
+
+  const improved = [];
+  await Promise.all(retryBatches.map(async (batch) => {
+    const locs = batch.map((b) => b.loc);
+    const anchors = pickAnchors(locs, [...gazAnchors, ...landmarks]);
+    // Quote each failure back with its distance. Note the escape hatch: some
+    // of these are correct and merely outside Washington's catch areas, and a
+    // model forced to "fix" Telegraph Cove would move a right answer.
+    const feedback = batch
+      .map((b) => `- ${JSON.stringify(b.loc)} was placed at ${b.lat}, ${b.lng}, which is ${Math.round(inland.get(b.loc))} m inland.`)
+      .join(NL);
+    const msg = await anthropic.messages.create({
+      model: MODEL,
+      max_tokens: 8000,
+      system: geocodingSystemPrompt(),
+      messages: [{
+        role: 'user',
+        content:
+          'Your previous estimates for these locations fell on land. A whale cannot be on land.' + NL + NL +
+          feedback + NL + NL +
+          'Re-estimate each one, on the water.' + NL + NL +
+          'IMPORTANT: if a location is genuinely outside Washington marine waters - British Columbia, ' +
+          'the outer Pacific coast, or freshwater such as the Lake Washington Ship Canal - then it is ' +
+          'correct as it stands and the land check simply does not cover it. Return your original ' +
+          'coordinate unchanged in that case rather than moving it.' + NL + NL +
+          geocodingUserPrompt(locs, anchors)
+      }]
+    });
+    const text = msg.content.filter((b) => b.type === 'text').map((b) => b.text).join('');
+    for (const r of parseJsonArray(text)) {
+      if (r.confidence !== 'none' && Number.isFinite(r.lat) && Number.isFinite(r.lng) && inBounds(r.lat, r.lng)) {
+        improved.push({ loc: r.input, lat: r.lat, lng: r.lng });
+      }
+    }
+  }));
+
+  // Keep a retry only when it actually moved the point closer to water.
+  const after = await inlandDistances(improved);
+  let better = 0;
+  for (const cand of improved) {
+    const was = inland.get(cand.loc) ?? 0;
+    const now = after.has(cand.loc) ? after.get(cand.loc) : 0;   // absent = in water
+    if (now < was) {
+      resolved.set(cand.loc, { ...resolved.get(cand.loc), lat: cand.lat, lng: cand.lng });
+      better++;
+    }
+  }
+  log(`attempt ${attempt}: ${better} improved, ${improved.length - better} kept their original position`);
 }
 
 // --- what changed ---
