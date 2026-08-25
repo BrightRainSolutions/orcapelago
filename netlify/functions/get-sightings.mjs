@@ -45,25 +45,49 @@ export default async (req) => {
   try {
     const sql = getSql();
     const rows = await sql`
-      select id, newsletter_id, sighting_date::text, sighting_time::text, species, species_raw,
-             pod_or_group, individual_ids, count, direction, behaviors,
-             detection_methods, location_raw, gazetteer_id, landmark_id, lat, lng,
-             geo_method, needs_review, summary, raw_excerpt, reporter, report_kind
-      from sightings
-      where (${newsletterId}::uuid is null or newsletter_id = ${newsletterId}::uuid)
-        and (${!wantLatest} or newsletter_id = (
-              select id from newsletters
-              where status = 'complete' and date_range is not null
-              order by upper(date_range) desc limit 1))
-        and (${from}::date is null or sighting_date >= ${from}::date)
-        and (${to}::date is null or sighting_date <= ${to}::date)
-        and (${species}::text[] is null or species = any(${species}::text[]))
-        and (${needsReview}::boolean is null or needs_review = ${needsReview}::boolean)
-        and (${bbox?.[0] ?? null}::float8 is null
-             or (lng between ${bbox?.[0] ?? null}::float8 and ${bbox?.[2] ?? null}::float8
-                 and lat between ${bbox?.[1] ?? null}::float8 and ${bbox?.[3] ?? null}::float8))
-        and (${includeUnresolved} or geo_method <> 'unresolved')
-      order by sighting_date desc, sighting_time desc nulls last
+      select * from (
+        select id, newsletter_id, sighting_date::text, sighting_time::text, species, species_raw,
+               pod_or_group, individual_ids, count, direction, behaviors,
+               detection_methods, location_raw, gazetteer_id, landmark_id, lat, lng,
+               geo_method, needs_review, summary, raw_excerpt, reporter, report_kind,
+               -- Metres from the nearest marine water. Computed for the review
+               -- queue only — null on the public map, where nothing uses it and
+               -- the KNN lookup would cost about a second across the table.
+               --
+               -- Outside water is NOT the same as wrong: the mask is WDFW's
+               -- Washington catch areas, so Canadian water, the Pacific coast
+               -- and freshwater like the Ballard ship canal all read as outside
+               -- while being perfectly correct.
+               case when ${needsReview} is true and lat is not null then (
+                 select round(st_distance(w.geom, st_setsrid(st_makepoint(lng, lat), 4326)::geography)::numeric)
+                 from water_areas_sub w
+                 order by w.geom <-> st_setsrid(st_makepoint(lng, lat), 4326)::geography
+                 limit 1
+               ) end as water_dist_m
+        from sightings
+        where (${newsletterId}::uuid is null or newsletter_id = ${newsletterId}::uuid)
+          and (${!wantLatest} or newsletter_id = (
+                select id from newsletters
+                where status = 'complete' and date_range is not null
+                order by upper(date_range) desc limit 1))
+          and (${from}::date is null or sighting_date >= ${from}::date)
+          and (${to}::date is null or sighting_date <= ${to}::date)
+          and (${species}::text[] is null or species = any(${species}::text[]))
+          and (${needsReview}::boolean is null or needs_review = ${needsReview}::boolean)
+          and (${bbox?.[0] ?? null}::float8 is null
+               or (lng between ${bbox?.[0] ?? null}::float8 and ${bbox?.[2] ?? null}::float8
+                   and lat between ${bbox?.[1] ?? null}::float8 and ${bbox?.[3] ?? null}::float8))
+          and (${includeUnresolved} or geo_method <> 'unresolved')
+      ) s
+      -- Review runs worst-first, but only within the band where distance means
+      -- error. Ranking on raw distance put Telegraph Cove and Port Hardy at the
+      -- top: Northern Resident sightings 300km up Vancouver Island, correctly
+      -- placed and merely outside Washington's catch areas. Past 5km distance
+      -- measures coverage, not mistakes, so those fall back to date order —
+      -- as do pins within 100m, which is shoreline noise.
+      order by
+        case when water_dist_m between 100 and 5000 then water_dist_m end desc nulls last,
+        sighting_date desc, sighting_time desc nulls last
       limit ${limit} offset ${offset}`;
 
     // Context for a newsletter-scoped request: which issue this is, and the

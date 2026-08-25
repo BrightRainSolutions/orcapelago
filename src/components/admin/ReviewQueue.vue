@@ -17,6 +17,12 @@
              reviewed, so counting it here would misstate the backlog. -->
         <span class="rq-count">{{ flaggedCount }}</span>
       </div>
+      <p v-if="outOfWater" class="admin-hint">
+        Sorted furthest-inland first — {{ outOfWater }} of these sit 100&nbsp;m
+        to 5&nbsp;km from marine water. Freshwater and anything beyond the
+        Washington coverage area are excluded, so this is an ordering, not a
+        verdict.
+      </p>
       <p v-if="truncated" class="admin-hint">
         Showing the first {{ rows.length }}; more remain. Work the Candidates
         tab first — each promote backfills every sighting sharing that location.
@@ -35,7 +41,13 @@
                  reviewed, so say so rather than let it pass as a queue item. -->
             <em v-if="s.opened_by_id" class="ri-tag">opened</em>
           </span>
-          <span class="ri-meta">{{ s.sighting_date }} · {{ s.species }} · {{ s.geo_method }}</span>
+          <span class="ri-meta">
+            {{ s.sighting_date }} · {{ s.species }} · {{ s.geo_method }}
+            <!-- Distance inland, when the position is outside marine water.
+                 Not a verdict — Canadian water and the Ballard ship canal are
+                 outside the mask and perfectly correct. -->
+            <em v-if="inland(s)" class="ri-inland">{{ inland(s) }} inland</em>
+          </span>
         </button>
         <p v-if="!rows.length" class="admin-hint">Queue is clear.</p>
       </div>
@@ -116,6 +128,21 @@ const form = reactive({});
 const placeName = ref('');
 
 const flaggedCount = computed(() => rows.value.filter((r) => r.needs_review).length);
+
+// Same band the API sorts on. Below 100m is shoreline noise; above 5km the
+// distance is measuring the mask's coverage rather than a mistake — northern
+// Vancouver Island sightings are 300km outside it and entirely correct.
+const INLAND_MIN = 100;
+const INLAND_MAX = 5000;
+
+const outOfWater = computed(() => rows.value.filter((r) => inland(r)).length);
+
+/** Human distance inland, or null when the pin is fine or out of scope. */
+function inland(s) {
+  const m = Number(s.water_dist_m);
+  if (!Number.isFinite(m) || m < INLAND_MIN || m > INLAND_MAX) return null;
+  return m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`;
+}
 
 // "Clear flag" is only true when there is a flag; a sighting opened from the
 // map may have been reviewed months ago.

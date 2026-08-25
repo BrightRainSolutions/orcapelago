@@ -745,3 +745,18 @@ body { margin: 0; font-family: system-ui, sans-serif; color: var(--ink); }
 /* Mirror the camera glyph for west-facing cameras. Done in CSS rather than a
    second SVG so there is one icon to maintain. */
 .webcam-marker.faces-west svg { transform: scaleX(-1); }
+
+/* Distance-inland tag on a review row. Red because it marks a position that
+   is probably wrong, unlike the neutral 'opened' tag beside it. */
+.ri-inland {
+  margin-left: 0.4rem;
+  font-style: normal;
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #b00020;
+  border: 1px solid #b00020;
+  padding: 0 0.25rem;
+  white-space: nowrap;
+}
+.review-list .review-item.active .ri-inland { color: #fff; border-color: #fff; }

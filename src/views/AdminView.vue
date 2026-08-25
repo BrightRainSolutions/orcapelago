@@ -52,7 +52,7 @@ import CandidatesPanel from '../components/admin/CandidatesPanel.vue';
 import GazetteerPanel from '../components/admin/GazetteerPanel.vue';
 
 // See lib/auth.js — temporary local bypass, removed before deploy.
-const authed = ref(import.meta.env.VITE_OPEN_ADMIN === '1');
+const authed = ref(false);
 const tokenInput = ref('');
 const gateError = ref('');
 const checking = ref(false);
