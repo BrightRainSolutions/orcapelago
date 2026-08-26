@@ -16,7 +16,7 @@ The basemap is isolated in [src/map/basemap.js](src/map/basemap.js); both the ba
 
 ```
 design/                     spec + raw newsletter source material
-docs/sightings-newsletters/ newsletter source text (July 15 + July 29, 2026)
+docs/sightings-newsletters/ newsletter source text — NOT in the repo, see below
 db/                         migrations + gazetteer seed SQL
 lib/                        shared server logic (pure where possible, unit-testable)
   preprocess.js               strip boilerplate, detect SUMMARY, chunk on headers
@@ -60,6 +60,11 @@ Ingest tab cannot finish one. `run-ingest.mjs` has no such limit and runs the
 identical code path.
 
 1. **Save the text** to `docs/sightings-newsletters/YYYY-MM-DD-whale-sighting-report.txt`.
+
+   That directory is gitignored. The newsletters are Orca Network's editorial
+   work and this project does not redistribute them — it stores what it
+   derives from them, with attribution. Create the folder locally and paste
+   each issue in as you ingest it.
 
 2. **Put the publication date alone on its own line at the top** — `July 29, 2026`,
    nothing else on that line, within the first 10 lines. Without it the ingest

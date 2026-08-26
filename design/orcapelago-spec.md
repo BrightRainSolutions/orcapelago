@@ -1,5 +1,11 @@
 # Orcapelago — Build Specification
 
+> **Historical.** This is the original build spec, written before the code
+> existed, and the system has since moved away from it in several places —
+> ingest runs from the CLI rather than a paste box, the "location catalog" is
+> now a gazetteer plus a GNIS landmark table, and geocoding gained a water
+> mask. Read `docs/architecture.md` for what is actually built, and why.
+
 A public PWA that maps whale sightings from Orca Network newsletters. Newsletter text is pasted in by an admin, an AI extraction pipeline turns it into structured sighting records, a growing location catalog resolves named Salish Sea locations to coordinates, and the results render on a MapLibre map.
 
 A Bright Rain Solutions portfolio project. Public, read-only for visitors; ingestion is admin-only.

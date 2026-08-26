@@ -6,3 +6,11 @@ dev-dist/
 .env.*
 !.env.example
 *.local
+
+# Orca Network's newsletters are their editorial work. The ingest CLI reads
+# them from here, but they are not ours to redistribute in a public repo.
+docs/sightings-newsletters/
+
+# Scratch output from scripts/regeocode.mjs — before/after positions and
+# proposals for one experiment, regenerated on demand.
+db/regeocode-*.json
