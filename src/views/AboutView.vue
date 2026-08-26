@@ -19,14 +19,7 @@
       <p>
         Sightings arrive here through Orca Network's periodic reports, which are
         published days to weeks after the events they describe. The map will
-        always be looking backwards, and that is deliberate.
-      </p>
-      <p>
-        A live map of where the whales are right now would draw people to them.
-        These are wild animals, and several of these populations are in trouble.
-        The last thing they need is a crowd summoned by a notification. What you
-        are looking at is a record of where whales <em>have been</em>, which is
-        the interesting question anyway.
+        always be looking backwards.
       </p>
     </section>
 
@@ -79,8 +72,7 @@
         mammals in Washington and British Columbia, and they exist for good
         reason.
         <a href="https://www.bewhalewise.org/" target="_blank" rel="noopener">Be Whale Wise</a>
-        has the current rules for boaters and paddlers. The best views are from
-        shore, and they cost the whales nothing.
+        has the current rules for boaters and paddlers.
       </p>
     </section>
 
@@ -88,7 +80,7 @@
       <h2>How it works</h2>
       <p>
         Report text is processed into structured sightings (species, date,
-        location, behaviour), and each described place is resolved to
+        location, behavior), and each described place is resolved to
         coordinates. Some locations come from GPS in the original report, and
         some match a growing gazetteer of known places. The rest are estimated
         from the description and flagged for review, with confirmed locations
@@ -97,8 +89,8 @@
       <p>
         Estimated positions are approximate by nature. A report that reads
         <em>"mid-channel off Bush Point, heading north"</em> becomes a single
-        dot, and that dot is a best reading of a sentence, not a fix on an
-        animal. The same goes for hydrophone detections, where the position shown is the listening
+        dot, and that dot is a best reading of a sentence, not a fixed position of an orca. 
+        The same goes for hydrophone detections, where the position shown is the listening
         station rather than the whale.
       </p>
     </section>

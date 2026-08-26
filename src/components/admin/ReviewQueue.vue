@@ -86,14 +86,27 @@
         so it is an optional field on the same Save.
       -->
       <div class="review-actions">
-        <label class="review-place">
-          Also save this as a gazetteer place named
+        <!--
+          Opt-in by checkbox, with the name pre-filled from the report's own
+          wording. Pre-filling alone would be risky: a gazetteer full of
+          phrases ("North Beach, Whidbey side") degrades the trigram stage,
+          which is measured — adding one webcam entry once made "off Lime Kiln"
+          ambiguous. The checkbox means nothing is created unless you say so,
+          and the pre-fill means you edit a phrase down to a place rather than
+          typing from scratch.
+        -->
+        <label class="review-place-toggle">
+          <input type="checkbox" v-model="savePlace" />
+          Also save this as a gazetteer place
+        </label>
+        <label v-if="savePlace" class="review-place">
+          Named
           <input v-model="placeName" placeholder="e.g. Browns Point" />
         </label>
-        <p class="review-hint">
-          Optional. Gazetteer places resolve instantly on future ingests, with
-          no AI guess and no trip through this queue. The raw text above is
-          kept as an alias, so this exact wording matches next time.
+        <p v-if="savePlace" class="review-hint">
+          Trim it to the place itself — "North Beach", not "North Beach,
+          Whidbey side" — so future reports naming that place match it. The
+          report's exact wording is stored as an alias either way.
         </p>
         <button class="review-save" :disabled="saving" @click="save()">
           {{ saveLabel }}
@@ -126,6 +139,7 @@ const truncated = ref(false);
 const selected = ref(null);
 const form = reactive({});
 const placeName = ref('');
+const savePlace = ref(false);
 
 const flaggedCount = computed(() => rows.value.filter((r) => r.needs_review).length);
 
@@ -148,9 +162,9 @@ function inland(s) {
 // map may have been reviewed months ago.
 const saveLabel = computed(() => {
   if (saving.value) return 'Saving…';
-  const gaz = placeName.value.trim() ? ' & add to gazetteer' : '';
+  const gaz = savePlace.value && placeName.value.trim() ? ' & add to gazetteer' : '';
   if (!selected.value?.needs_review) return `Save changes${gaz}`;
-  return placeName.value.trim() ? 'Save & add to gazetteer' : 'Save & clear flag';
+  return savePlace.value && placeName.value.trim() ? 'Save & add to gazetteer' : 'Save & clear flag';
 });
 const message = ref('');
 const saving = ref(false);
@@ -177,7 +191,10 @@ function scrollActiveIntoView() {
 function select(s) {
   selected.value = s;
   message.value = '';
-  placeName.value = '';
+  // Pre-filled from the report's own wording so the field is a starting point
+  // rather than a blank; it is ignored unless the checkbox is ticked.
+  placeName.value = s.location_raw ?? '';
+  savePlace.value = false;
   Object.assign(form, {
     species: s.species,
     sighting_date: s.sighting_date,
@@ -207,7 +224,7 @@ function coordsMoved() {
 
 async function save() {
   // Cataloguing is opt-in by typing a name; it never replaces the save.
-  const addToGazetteer = Boolean(placeName.value.trim()) && Number.isFinite(form.lat);
+  const addToGazetteer = savePlace.value && Boolean(placeName.value.trim()) && Number.isFinite(form.lat);
   saving.value = true;
   message.value = '';
   try {
@@ -225,7 +242,18 @@ async function save() {
       const { entry } = await api('/gazetteer', {
         method: 'POST',
         admin: true,
-        body: { name: placeName.value.trim(), lat: form.lat, lng: form.lng }
+        // The report's exact wording rides along as an alias, so the next
+        // sighting phrased this way resolves free at stage 2 instead of going
+        // to the AI. The Candidates promote path has always done this; this
+        // one did not, while the hint text claimed it did.
+        body: {
+          name: placeName.value.trim(),
+          aliases: selected.value.location_raw && selected.value.location_raw !== placeName.value.trim()
+            ? [selected.value.location_raw]
+            : [],
+          lat: form.lat,
+          lng: form.lng
+        }
       });
       patch.gazetteer_id = entry.id;
       // NOT geo_method='catalog'. If the pin was moved, that coordinate came
