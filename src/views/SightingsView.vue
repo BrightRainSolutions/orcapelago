@@ -84,7 +84,8 @@
                     <template v-if="s.count">
                       <dt>Count</dt><dd>{{ s.count }}</dd>
                     </template>
-                    <dt>Reported by</dt><dd>{{ s.reporter || 'Not recorded' }}</dd>
+                    <!-- No "Reported by": names are admin-only now. -->
+                    <dt>Source</dt><dd>Orca Network</dd>
                     <dt>Position</dt>
                     <dd>{{ s.lat.toFixed(4) }}, {{ s.lng.toFixed(4) }} ({{ s.geo_method }})</dd>
                   </dl>

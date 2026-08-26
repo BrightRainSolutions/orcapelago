@@ -22,7 +22,10 @@
     <p v-if="sighting.summary" class="sp-summary">{{ sighting.summary }}</p>
 
     <div class="sp-foot">
-      <span class="sp-reporter">{{ sighting.reporter || '—' }}</span>
+      <!-- The source, not the person. Reporter names are withheld from the
+           public API (see get-sightings.mjs) — volunteers agreed to a
+           newsletter credit, not to a mapped, timestamped public record. -->
+      <span class="sp-reporter">Orca Network</span>
       <span class="sp-badge">{{ sighting.geo_method }}</span>
     </div>
 

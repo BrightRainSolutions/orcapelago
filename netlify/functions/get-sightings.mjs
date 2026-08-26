@@ -1,4 +1,17 @@
 // GET /api/sightings — public, the hot path (spec §7).
+//
+// PRIVACY: `reporter` and `raw_excerpt` are never served to an unauthenticated
+// caller. Orca Network credits its volunteers by name in the newsletter; they
+// agreed to that, not to being a queryable row on a public map. And because a
+// shore report's coordinate is often the OBSERVER's position rather than the
+// animal's (architecture §12, "Whale or whale-seer?"), publishing the name
+// alongside it would put a named private individual at a mapped place at a
+// known time — reconstructable across sightings into where someone habitually
+// stands. 922 distinct names are stored. The credit that belongs on the public
+// map is Orca Network's, which is in the attribution and on the About page.
+//
+// Both columns stay in the database, and both are returned to an authenticated
+// admin, because review needs them.
 // Query: newsletter (uuid | 'latest'), from, to, species (csv),
 // bbox (minLng,minLat,maxLng,maxLat), needs_review, limit, offset, format.
 // Default: GeoJSON FeatureCollection for the map, excluding unresolved
@@ -13,6 +26,7 @@
 // derive from a partial payload). Foreign members are legal in GeoJSON and
 // MapLibre ignores them.
 import { getSql } from '../../lib/db.js';
+import { isAdmin, unauthorized } from '../../lib/auth.js';
 
 const CACHE = 'public, max-age=300, stale-while-revalidate=600';
 // A needs_review query is the admin review queue, which must reflect writes
@@ -33,6 +47,10 @@ export default async (req) => {
   const limit = Math.min(parseInt(q.get('limit') || '5000', 10) || 5000, 10000);
   const offset = parseInt(q.get('offset') || '0', 10) || 0;
   const includeUnresolved = format === 'json';
+  // A needs_review query IS the review queue. It was readable by anyone, which
+  // meant every excerpt and reporter name could be pulled with one URL.
+  const admin = isAdmin(req);
+  if (needsReview !== null && !admin) return unauthorized();
   const cacheHeader = needsReview === null ? CACHE : NO_CACHE;
 
   if (bbox && (bbox.length !== 4 || bbox.some(Number.isNaN))) {
@@ -49,7 +67,12 @@ export default async (req) => {
         select id, newsletter_id, sighting_date::text, sighting_time::text, species, species_raw,
                pod_or_group, individual_ids, count, direction, behaviors,
                detection_methods, location_raw, gazetteer_id, landmark_id, lat, lng,
-               geo_method, needs_review, summary, raw_excerpt, reporter, report_kind,
+               geo_method, needs_review, summary, report_kind,
+               -- Withheld from the public payload entirely, not just blanked:
+               -- an omitted column cannot be leaked by a later refactor that
+               -- forgets to strip it.
+               case when ${admin} then raw_excerpt end as raw_excerpt,
+               case when ${admin} then reporter end as reporter,
                -- Metres from the nearest marine water. Computed for the review
                -- queue only — null on the public map, where nothing uses it and
                -- the KNN lookup would cost about a second across the table.

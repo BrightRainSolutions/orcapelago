@@ -162,7 +162,9 @@ const saving = ref(false);
 const REVIEW_LIMIT = 5000;
 
 async function load() {
-  const data = await api(`/sightings?needs_review=true&format=json&limit=${REVIEW_LIMIT}`);
+  // admin: true — needs_review is no longer a public query, and reporter and
+  // raw_excerpt only come back for an authenticated caller.
+  const data = await api(`/sightings?needs_review=true&format=json&limit=${REVIEW_LIMIT}`, { admin: true });
   rows.value = data.sightings;
   truncated.value = data.sightings.length >= REVIEW_LIMIT;
 }
