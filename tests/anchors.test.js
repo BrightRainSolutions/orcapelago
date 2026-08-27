@@ -1,6 +1,6 @@
 // Anchor seeding for AI geocoding (lib/geocode.js pickAnchors) — pure logic.
 import { describe, it, expect } from 'vitest';
-import { pickAnchors, landmarkLookup } from '../lib/geocode.js';
+import { pickAnchors, landmarkLookup, composeAnchors } from '../lib/geocode.js';
 import { parseJsonArray } from '../lib/extract.js';
 
 const landmarks = [
@@ -118,5 +118,35 @@ describe('repairControlChars', () => {
     const broken = '[{"input":"a' + TAB + 'b \\"quoted\\" c","lat":1}]';
     const [row] = parseJsonArray(broken);
     expect(row.input).toBe('a' + TAB + 'b "quoted" c');
+  });
+});
+
+describe('composeAnchors', () => {
+  const gazetteer = [
+    { name: 'Harrington Lagoon', aliases: ['Off Harrington Lagoon in Coupeville'], lat: 48.2119, lng: -122.6097 },
+    { name: 'Hidden Beach', aliases: [], lat: 48.1289, lng: -122.5628 }
+  ];
+  const landmarks = [
+    { name: 'Harrington Lagoon', feature_class: 'Bay', county: 'Island', lat: 48.2097, lng: -122.6124 },
+    { name: 'Rocky Point', feature_class: 'Cape', county: 'Island', lat: 48.1, lng: -122.6 },
+    { name: 'Rocky Point', feature_class: 'Cape', county: 'Pierce', lat: 47.4, lng: -122.9 }
+  ];
+
+  it('drops the GNIS feature a verified place supersedes', () => {
+    const names = composeAnchors(gazetteer, landmarks)
+      .filter((a) => a.name === 'Harrington Lagoon')
+      .map((a) => a.feature_class);
+    expect(names).toEqual(['verified place']);
+  });
+
+  it('keeps several same-named GNIS features when none is settled', () => {
+    const rocky = composeAnchors(gazetteer, landmarks).filter((a) => a.name === 'Rocky Point');
+    expect(rocky).toHaveLength(2);
+    expect(rocky.map((r) => r.county).sort()).toEqual(['Island', 'Pierce']);
+  });
+
+  it('includes aliases as verified anchors', () => {
+    const byName = composeAnchors(gazetteer, landmarks).map((a) => a.name);
+    expect(byName).toContain('Off Harrington Lagoon in Coupeville');
   });
 });

@@ -1,0 +1,16 @@
+-- 006: one entry per place name.
+--
+-- Two gazetteer rows sharing a name do not merely clutter the table, they
+-- actively break lookup. Stage 2 resolves exact name, then exact alias, then
+-- trigram similarity requiring a CLEAR winner — and two identical names score
+-- identically, so the margin is zero and the string falls through to the AI.
+-- The second save of a place silently undoes the benefit of the first.
+--
+-- Case-insensitive because the lookup normalises before comparing: "north
+-- beach" and "North Beach" are the same place to the geocoder, so they must be
+-- the same row here.
+--
+-- Aliases are deliberately NOT constrained. The same wording pointing at two
+-- different places is a real editorial mistake, but it is one a person should
+-- resolve rather than something an insert should refuse mid-review.
+create unique index if not exists gazetteer_name_unique on gazetteer (lower(name));

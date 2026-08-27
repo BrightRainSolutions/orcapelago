@@ -22,7 +22,7 @@
       <tbody>
         <tr>
           <td><input v-model="draft.name" placeholder="New entry…" /></td>
-          <td><input v-model="draft.aliases" placeholder="comma,separated" /></td>
+          <td><textarea v-model="draft.aliases" class="alias-box" rows="2" placeholder="one per line"></textarea></td>
           <td><input v-model.number="draft.lat" type="number" step="0.0001" class="coord" /></td>
           <td><input v-model.number="draft.lng" type="number" step="0.0001" class="coord" /></td>
           <td><input v-model="draft.region" /></td>
@@ -31,7 +31,26 @@
         </tr>
         <tr v-for="g in gazetteer" :key="g.id">
           <td><input v-model="g.name" /></td>
-          <td><input :value="g.aliases.join(', ')" @input="g.aliases = splitCsv($event.target.value)" /></td>
+          <!--
+            One alias per LINE, not comma-separated.
+
+            Aliases are raw reporter phrasings and they frequently contain
+            commas — "Alderbrook, Mid channel", "View from Fort Ebey, heading
+            to WB [westbound]". Splitting on commas turned one alias into two
+            the moment anyone edited the field, and "Mid channel" as an alias
+            would then resolve every mid-channel report to Alderbrook with
+            needs_review = false. Newlines effectively never appear in the
+            source text, and the display now shows honestly how many aliases
+            a row has.
+          -->
+          <td>
+            <textarea
+              class="alias-box"
+              :rows="Math.max(2, g.aliases.length)"
+              :value="g.aliases.join(NL)"
+              @input="g.aliases = splitLines($event.target.value)"
+            ></textarea>
+          </td>
           <td><input v-model.number="g.lat" type="number" step="0.0001" class="coord" /></td>
           <td><input v-model.number="g.lng" type="number" step="0.0001" class="coord" /></td>
           <td><input v-model="g.region" /></td>
@@ -55,7 +74,14 @@ const gazetteer = ref([]);
 const statusMsg = ref('');
 const draft = reactive({ name: '', aliases: '', lat: null, lng: null, region: '' });
 
-const splitCsv = (s) => s.split(',').map((x) => x.trim()).filter(Boolean);
+// Newline-delimited, and deduped: the same phrasing twice is never meaningful.
+const NL = String.fromCharCode(10);
+const CR = String.fromCharCode(13);
+// Split on line breaks without writing an escape sequence anywhere:
+// strip carriage returns, then split on the line feed. Backslash handling
+// in tooling has silently mangled four patches to this project.
+const splitLines = (s) =>
+  [...new Set(s.split(CR).join('').split(NL).map((x) => x.trim()).filter(Boolean))];
 
 async function load() {
   gazetteer.value = (await api('/gazetteer')).gazetteer;
@@ -68,7 +94,7 @@ async function create() {
       admin: true,
       body: {
         name: draft.name.trim(),
-        aliases: splitCsv(draft.aliases),
+        aliases: splitLines(draft.aliases),
         lat: draft.lat,
         lng: draft.lng,
         region: draft.region.trim() || null

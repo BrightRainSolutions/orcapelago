@@ -224,6 +224,7 @@ function coordsMoved() {
 
 async function save() {
   // Cataloguing is opt-in by typing a name; it never replaces the save.
+  let gazetteerMerged = false;
   const addToGazetteer = savePlace.value && Boolean(placeName.value.trim()) && Number.isFinite(form.lat);
   saving.value = true;
   message.value = '';
@@ -239,7 +240,7 @@ async function save() {
     };
     if (coordsMoved()) patch.geo_method = 'manual';
     if (addToGazetteer) {
-      const { entry } = await api('/gazetteer', {
+      const { entry, merged } = await api('/gazetteer', {
         method: 'POST',
         admin: true,
         // The report's exact wording rides along as an alias, so the next
@@ -256,6 +257,7 @@ async function save() {
         }
       });
       patch.gazetteer_id = entry.id;
+      gazetteerMerged = merged === true;
       // NOT geo_method='catalog'. If the pin was moved, that coordinate came
       // from a person — the catalogue entry was created FROM it, not the other
       // way round, so claiming a catalogue lookup misreports provenance. The
@@ -264,7 +266,11 @@ async function save() {
       // 'catalog' honestly, at ingest.
     }
     await api(`/sightings/${selected.value.id}`, { method: 'PATCH', admin: true, body: patch });
-    message.value = addToGazetteer ? 'Saved, and added to the gazetteer.' : 'Saved.';
+    message.value = !addToGazetteer
+      ? 'Saved.'
+      : gazetteerMerged
+        ? `Saved. "${placeName.value.trim()}" already existed — this wording was added as an alias.`
+        : 'Saved, and added to the gazetteer.';
 
     // Keep the session moving: the saved row leaves the queue, so the same
     // index is now the next one down. Losing your place after every save is

@@ -770,3 +770,13 @@ a.about-button:hover { background: #fff; color: var(--ink); border-color: var(--
   color: var(--ink); cursor: pointer; margin-bottom: 0.5rem;
 }
 .review-place-toggle input { width: auto; margin: 0; accent-color: var(--accent); }
+
+/* Alias editor: one per line, so a comma inside an alias is not a delimiter. */
+.alias-box {
+  width: 100%;
+  min-width: 18rem;
+  font: inherit;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  resize: vertical;
+}

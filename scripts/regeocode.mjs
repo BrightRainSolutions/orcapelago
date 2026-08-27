@@ -34,7 +34,7 @@ for (const line of readFileSync(join(root, '.env'), 'utf8').split(/\r?\n/)) {
 }
 
 const { getSql } = await import('../lib/db.js');
-const { landmarkLookup, pickAnchors } = await import('../lib/geocode.js');
+const { landmarkLookup, pickAnchors, composeAnchors } = await import('../lib/geocode.js');
 const { MODEL, geocodingSystemPrompt, geocodingUserPrompt } = await import('../lib/prompts.js');
 const { parseJsonArray } = await import('../lib/extract.js');
 const { default: Anthropic } = await import('@anthropic-ai/sdk');
@@ -164,10 +164,7 @@ async function inlandDistances(entries) {
 }
 
 // --- stage 3: AI, anchored on the gazetteer as well as GNIS ---
-const gazAnchors = gazetteer.flatMap((g) => [
-  { name: g.name, feature_class: 'verified place', lat: g.lat, lng: g.lng },
-  ...(g.aliases ?? []).map((a) => ({ name: a, feature_class: 'verified place', lat: g.lat, lng: g.lng }))
-]);
+const anchorPool = composeAnchors(gazetteer, landmarks);
 let misses = [...byLocation.keys()].filter((l) => !resolved.has(l));
 if (limit) {
   misses = misses.slice(0, limit);
@@ -181,7 +178,7 @@ console.log(`gazetteer/landmark resolved ${resolved.size} free; ${misses.length}
 // sequential (architecture §12) — this is what that fix would feel like.
 let done = 0;
 async function runBatch(batch) {
-  const anchors = pickAnchors(batch, [...gazAnchors, ...landmarks]);
+  const anchors = pickAnchors(batch, anchorPool);
   const msg = await anthropic.messages.create({
     model: MODEL,
     max_tokens: 8000,
@@ -223,7 +220,7 @@ for (let attempt = 2; attempt <= attempts; attempt++) {
   const improved = [];
   await Promise.all(retryBatches.map(async (batch) => {
     const locs = batch.map((b) => b.loc);
-    const anchors = pickAnchors(locs, [...gazAnchors, ...landmarks]);
+    const anchors = pickAnchors(locs, anchorPool);
     // Quote each failure back with its distance. Note the escape hatch: some
     // of these are correct and merely outside Washington's catch areas, and a
     // model forced to "fix" Telegraph Cove would move a right answer.
