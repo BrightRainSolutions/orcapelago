@@ -276,7 +276,7 @@ Applied per sighting, in `lib/geocode.js`. Four stages, first hit wins.
 | # | Stage | Mechanism | `geo_method` | `needs_review` | Cost |
 |---|---|---|---|---|---|
 | 1 | GPS in report | model-reported coords (bounds-checked), then our own `parseGps` of `location_raw` and `raw_excerpt` | `gps` | false | free |
-| 2 | Gazetteer | exact name → alias → `pg_trgm` similarity ≥ 0.4 with ≥ 0.1 margin over runner-up | `catalog` | false | free |
+| 2 | Gazetteer | exact name → exact alias. **No fuzzy matching** (removed 2026-08-30, see §17) | `catalog` | false | free |
 | 2b | Landmarks (GNIS) | **unique exact** name match only — duplicates and fuzzy fall through to anchored AI (no trigram threshold separates "Pt Robinson"→Point Robinson 0.588 from "Active Pass"→Active Cove 0.438, 25km wrong) | `landmark` | false | free |
 | 3 | Claude | batched 60 per call, `inBounds` checked; prompt seeded with anchor landmarks named in the batch | `ai` | **true** | billed |
 | 4 | Nothing worked | — | `unresolved` | **true** | free |
@@ -284,24 +284,15 @@ Applied per sighting, in `lib/geocode.js`. Four stages, first hit wins.
 Stage 2 runs **once per distinct `location_raw`**, not once per sighting — the
 same place name recurs constantly within a newsletter.
 
-**Why the fuzzy match demands a margin.** A trigram score ≥ 0.4 alone isn't
-enough; the code also requires the top hit to beat the runner-up by ≥ 0.1. Two
-near-equal matches mean the string is ambiguous, and guessing wrong writes a
-confidently incorrect coordinate that nothing downstream would flag. Ambiguity
-falls through to AI, which sets `needs_review`. *Consequence: duplicate
-gazetteer names silently defeat stage 2 forever — two "Bush Point" rows always
-tie, always fall through, always cost money.*
-
-**Why an LLM instead of a real geocoder.** The inputs are informal, hyper-local,
-and often relational: *"Just off Blakely Rock with the sailboat"*, *"mid-channel
-off Bush Point"*, *"north end of Saratoga Passage"*. Google/Mapbox/Nominatim
-resolve street addresses and official place names — they fail on whale-watcher
-shorthand, and when they do resolve something they happily return a point on
-land. The prompt in `lib/prompts.js` does two things no conventional geocoder
-can: it establishes Salish Sea domain framing (points, passages, parks, ferry
-routes, informal landmarks), and it demands the coordinate be placed **on the
-water adjacent to the named feature**. It also returns a `confidence` field and
-its reasoning, both stored on the candidate for human review.
+**Why there is no fuzzy match.** There was one — `pg_trgm` ≥ 0.4 with a ≥ 0.1
+margin over the runner-up — and it was deleted after being measured against the
+whole corpus. It resolved 52 strings, and 19 of them landed on a single entry
+named "north side of Jones Island": "north side of Hat Island" scored 0.677
+against it, "North side of James Island" 0.742, "N of Pt Robinson (island side)"
+0.467 and 145 km wrong. All written as `geo_method='catalog'` with
+`needs_review = false`, which is unreviewable. Phrase-shaped names match
+phrase-shaped queries, and trigram scores in the 0.4s against a few dozen rows
+are noise. Full account in §17.
 
 **Why stage 3 failures are non-fatal.** The whole AI block is wrapped in a
 try/catch that records a warning and leaves those sightings `unresolved`. The
@@ -459,8 +450,8 @@ Collected for convenience — each is explained in context above.
 3. **Extraction streams because the SDK rejects non-streaming at 32K
    `max_tokens`** — not for UI streaming. (§3)
 4. **The client admin gate is cosmetic**; all enforcement is server-side. (§8)
-5. **The fuzzy-match margin exists to make ambiguity fall through to AI**
-   rather than guess. (§5)
+5. **Gazetteer matching is exact-only.** Fuzzy matching was measured as
+   net-harmful and removed. (§5, §17)
 6. **An LLM geocoder was chosen over a conventional one** because the inputs are
    informal landmarks and the output must land on water. (§5)
 7. **`status='complete'` with a non-null `error_message`** is normal — that's
@@ -868,3 +859,153 @@ review queue a ruthless sort order: impossible positions first.
 
 Only (1) is mechanical. (2) and (3) are modelling decisions, and (3) is the one
 that makes the difference between a map that looks right and one that is right.
+
+## 17. Simplifying the geocoder (2026-08-30)
+
+A night of chasing one bad pin ended with less machinery, not more. Recorded
+here because most of it is a deletion, and deletions leave no trace in the code
+for the next person to reason about.
+
+### Fuzzy gazetteer matching is gone
+
+Measured over 2,102 distinct location strings: fuzzy resolved 52, and **19 of
+them landed on one entry named `north side of Jones Island`**, a phrase saved
+as a place name. `north side of Hat Island` scored 0.677 against it, `North
+side of James Island` 0.742, `N of Pt Robinson (island side)` 0.467 — that last
+one 145 km wrong, all stored as `catalog` with `needs_review = false`.
+
+Phrase-shaped names match phrase-shaped queries. Trigram scores in the 0.4s
+against a few dozen rows are noise, not signal.
+
+Deleting it removed, in one go: the 0.4 threshold, the 0.1 margin, held ties,
+`TIE_BREAK_KM`, `distanceKm`, stage 2c, the tie warnings, and the standing
+requirement that entries be named like places rather than phrases. **A phrase
+entry is now inert as a lookup key and useful as an anchor**, which is what the
+person saving it wanted in the first place.
+
+The cost was ~7 correct fuzzy hits. Those strings now reach the model with
+their gazetteer entry as an anchor instead.
+
+`pg_trgm` stays installed: it is right for a human picking from ranked search
+results, which is the planned gazetteer search box. It was automated silent
+selection that failed.
+
+### The chain, entire
+
+```
+1. GPS in the text
+2. EXACT name or alias — gazetteer first, then GNIS water features
+3. Claude, anchored on every known place found inside the string
+```
+
+### Anchors, and only there
+
+Anchors exist solely to seed stage 3. Nothing else reads them — not lookup, not
+the map, not review. `composeAnchors(gazetteer, landmarks)` builds the pool and
+**a verified place supersedes any GNIS feature of the same name**: the gazetteer
+exists to settle which coordinate a name means, so handing the model both
+answers is pointless. Several same-named GNIS features are still sent together
+on purpose, with counties, so it can disambiguate from context.
+
+### Bracketed expansions broke two unrelated things
+
+The preprocessor writes `Pt [Point] Robinson` and `N [north] of X`. That
+insertion lands in the middle of a place name, so:
+
+- **Anchoring** found nothing for `point robinson`. `pickAnchors` now searches
+  three readings of every string — as written, expansion folded in, brackets
+  stripped. Worth 19 of 2,102 strings; small, but systematic and recurring.
+- **`parseJsonArray` located the array's end with `lastIndexOf(']')`**, which
+  lands inside `"Wonn Rd [Road] beach access"`. On a real truncated response
+  that cut recovery from 56 objects to 12. The heuristic is gone; salvage finds
+  the true end by walking back from the last `}`.
+
+### Truncation
+
+Geocoding `max_tokens` was 8000, sized when `reasoning` was a clause. The
+geocoding domain document made it a sentence, and 60 items stopped fitting — a
+response arrived at 23,803 characters, cut mid-word, and the batch was lost
+twice. `max_tokens` is now 16000, and `parseJsonArray` falls back to
+`salvageTruncatedArray`, which extraction had used all along and geocoding never
+reached. 56 of 57 objects now survive that same response.
+
+`regeocode.mjs` also gained per-batch error isolation and dumps any unparseable
+response to `db/regeocode-badresponse-*.txt` — a parse failure costs money to
+reproduce, so the evidence has to outlive the crash.
+
+### What the flag actually means
+
+`needs_review = true` means "a machine placed this", not "this is wrong". Of
+1,692 flagged sightings, **1,194 are already in marine water or within 100 m of
+it**. The genuinely suspect set is about **456**: 413 sitting 100 m–2 km inland
+and 43 more than 2 km inland south of the border. The review queue sorts
+worst-first within that band, so the top of the queue is the work and the tail
+is not.
+
+## 18. Two things that shipped without landing in this document
+
+### Reporter names are withheld from the public API (2026-08-25)
+
+`reporter` and `raw_excerpt` are selected only for an authenticated caller,
+and a `needs_review` query — which IS the review queue — now requires admin.
+Orca Network credits its volunteers by name in the newsletter; they agreed to
+that, not to being a queryable row on a public map. And because a shore
+report's coordinate is often the observer's position rather than the animal's
+(§12, "Whale or whale-seer?"), publishing the name beside it would place a
+named private individual at a mapped spot at a known time. 922 distinct names
+are stored. The public map credits Orca Network as the source.
+
+The columns are withheld rather than blanked — an omitted column cannot be
+leaked by a later refactor that forgets to strip it, which is exactly how
+`raw_excerpt` was still shipping in the `format=json` path after being
+stripped from GeoJSON.
+
+### The admin bypass is gone (2026-08-25)
+
+A `VITE_OPEN_ADMIN=1` escape hatch opened the admin API without a token during
+UI work. It was removed before deploying, along with its branch in
+`lib/auth.js` and its client-side counterpart. If admin ever needs opening
+locally again, set `ADMIN_TOKEN` and send it — do not reintroduce a branch
+that returns true, which is one stray environment variable away from an open
+API. Verified in production: admin routes 401, public routes 200.
+
+`ANTHROPIC_API_KEY` is deliberately absent from the Netlify environment. The
+deployed ingest function builds a bare `new Anthropic()`, so without the key
+it physically cannot spend money — ingest runs from the CLI, where the key
+lives. Shipping the key to a public host buys nothing.
+
+### Worked examples did not help (2026-08-30, measured then removed)
+
+124 human-placed pins exist in `geo_method='manual'` — labelled pairs of a
+reporter's words and a coordinate a person who knows the water chose. The
+obvious idea is to show the model some. Thirteen were selected to span the
+failure classes (vantage, mid-channel, ferry, movement, offset, webcam), all
+of them positions sitting in marine water, and appended to the geocoding
+system prompt.
+
+A/B over 58 strings with the example strings excluded, 2 trials per arm:
+
+| arm | trial 1 | trial 2 | mean |
+|---|---|---|---|
+| rules only | 48% | 53% | **50.9%** |
+| rules + examples | 43% | 52% | **47.4%** |
+
+Worse, and the gap is smaller than either arm's own trial-to-trial spread —
+so the honest reading is no detectable benefit. Removed, along with the
+generator and the loader, rather than left as a disabled code path.
+
+Hypothesis for why: few-shot teaches FORM, and the model already had the
+form. What it lacks is geography, and thirteen examples about Point Defiance
+cannot supply it. The judgment they encoded was already stated as rules in
+the domain document.
+
+This completes the picture of what the geocoder responds to:
+
+| ingredient | effect |
+|---|---|
+| **Anchors** (facts) | 52.9% -> 69.7% in water across newsletters. Strongest |
+| **Domain document** (rules) | 55.6% -> 62.8%, mostly consistency |
+| **Worked examples** (precedent) | none detectable |
+
+Which means human review compounds through the GAZETTEER, where each verified
+place becomes an anchor for every phrase that names it — not as training data.

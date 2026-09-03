@@ -14,3 +14,7 @@ docs/sightings-newsletters/
 # Scratch output from scripts/regeocode.mjs — before/after positions and
 # proposals for one experiment, regenerated on demand.
 db/regeocode-*.json
+
+# Raw model responses dumped by scripts/regeocode.mjs when one fails to parse.
+# Evidence for diagnosing a specific run, not source.
+db/regeocode-badresponse-*.txt

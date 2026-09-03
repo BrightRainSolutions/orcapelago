@@ -29,12 +29,6 @@ const { parseGps } = await import('../lib/gps-parse.js');
 
 const sql = getSql();
 const norm = (s) => s.toLowerCase().replace(/\s+/g, ' ').trim();
-const TIE_BREAK_KM = 5;
-const distanceKm = (a, b) => {
-  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
-  const dLng = (((b.lng - a.lng) * Math.PI) / 180) * Math.cos((a.lat * Math.PI) / 180);
-  return Math.sqrt(dLat * dLat + dLng * dLng) * 6371;
-};
 
 const args = process.argv.slice(2);
 const stored = args.includes('--stored');
@@ -87,20 +81,7 @@ for (const q of queries) {
     console.log(`  2 gazetteer     RESOLVES -> "${alias.name}" ${pos(alias)}  (exact alias)`);
     continue;
   }
-  const fuzzy = await sql`
-    select id, name, lat, lng, similarity(lower(name), ${n}) as sim
-    from gazetteer where similarity(lower(name), ${n}) >= 0.4
-    order by sim desc limit 2`;
-  let tie = null;
-  if (!fuzzy.length) {
-    console.log('  2 gazetteer     nothing scores 0.4 or better');
-  } else if (fuzzy.length === 1 || fuzzy[0].sim - fuzzy[1].sim >= 0.1) {
-    console.log(`  2 gazetteer     RESOLVES -> "${fuzzy[0].name}" ${pos(fuzzy[0])}  (trigram ${Number(fuzzy[0].sim).toFixed(3)}${fuzzy[1] ? `, clear of "${fuzzy[1].name}" at ${Number(fuzzy[1].sim).toFixed(3)}` : ', only candidate'})`);
-    continue;
-  } else {
-    tie = { top: fuzzy[0], runnerUp: fuzzy[1], apartKm: distanceKm(fuzzy[0], fuzzy[1]) };
-    console.log(`  2 gazetteer     TIE held: "${fuzzy[0].name}" ${Number(fuzzy[0].sim).toFixed(3)} vs "${fuzzy[1].name}" ${Number(fuzzy[1].sim).toFixed(3)} — ${tie.apartKm.toFixed(1)}km apart`);
-  }
+  console.log('  2 gazetteer     no exact name or alias match');
 
   // 2b. GNIS — gets first refusal, ahead of any tie-break
   const lm = landmarkLookup(q, landmarks);
@@ -110,15 +91,6 @@ for (const q of queries) {
   }
   const sameName = landmarks.filter((l) => norm(l.name) === n);
   console.log(`  2b GNIS         ${sameName.length > 1 ? `${sameName.length} features share this name — ambiguous, skipped` : 'no unique exact match'}`);
-
-  // 2c. Tie-break
-  if (tie) {
-    if (tie.apartKm <= TIE_BREAK_KM) {
-      console.log(`  2c tie-break    RESOLVES -> "${tie.top.name}" ${pos(tie.top)}  (within ${TIE_BREAK_KM}km, flagged for review)`);
-      continue;
-    }
-    console.log(`  2c tie-break    declined: ${tie.apartKm.toFixed(1)}km apart, further than ${TIE_BREAK_KM}km`);
-  }
 
   // 3. AI — what it would be given
   const anchors = pickAnchors([q], anchorPool, 6);

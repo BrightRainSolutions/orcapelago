@@ -1,6 +1,6 @@
 // Anchor seeding for AI geocoding (lib/geocode.js pickAnchors) — pure logic.
 import { describe, it, expect } from 'vitest';
-import { pickAnchors, landmarkLookup, composeAnchors } from '../lib/geocode.js';
+import { pickAnchors, landmarkLookup, composeAnchors, bracketReadings } from '../lib/geocode.js';
 import { parseJsonArray } from '../lib/extract.js';
 
 const landmarks = [
@@ -148,5 +148,32 @@ describe('composeAnchors', () => {
   it('includes aliases as verified anchors', () => {
     const byName = composeAnchors(gazetteer, landmarks).map((a) => a.name);
     expect(byName).toContain('Off Harrington Lagoon in Coupeville');
+  });
+});
+
+describe('truncated and split responses', () => {
+  const NL = String.fromCharCode(10);
+
+  it('salvages an array cut off at max_tokens', () => {
+    // No closing bracket at all — the shape that lost two geocoding batches.
+    const cut = '[{"input":"a","lat":48.1},{"input":"b","lat":48.2},{"input":"c","lat":4';
+    expect(parseJsonArray(cut)).toHaveLength(2);
+  });
+
+  it('salvages a truncated array inside a code fence', () => {
+    const cut = '```json' + NL + '[{"input":"a","lat":1},{"input":"b","lat":2';
+    expect(parseJsonArray(cut)).toHaveLength(1);
+  });
+});
+
+describe('bracketReadings', () => {
+  it('folds an expansion back into the place name', () => {
+    const readings = bracketReadings('N [north] of Pt [Point] Robinson (island side)');
+    expect(readings).toContain('north of Point Robinson (island side)');
+    expect(readings).toContain('N of Pt Robinson (island side)');
+  });
+
+  it('leaves text without brackets alone', () => {
+    expect(bracketReadings('off Bush Point')).toEqual(['off Bush Point']);
   });
 });

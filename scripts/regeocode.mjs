@@ -117,14 +117,10 @@ const gazetteer = await sql`select id, name, aliases, lat, lng from gazetteer`;
 const resolved = new Map();
 for (const [loc] of byLocation) {
   const n = norm(loc);
-  let hit = gazetteer.find((g) => norm(g.name) === n) ||
-            gazetteer.find((g) => g.aliases.some((a) => norm(a) === n));
-  if (!hit) {
-    const r = await sql`select id, name, lat, lng, similarity(lower(name), ${n}) as sim
-                        from gazetteer where similarity(lower(name), ${n}) >= 0.4
-                        order by sim desc limit 2`;
-    if (r.length === 1 || (r.length === 2 && r[0].sim - r[1].sim >= 0.1)) hit = r[0];
-  }
+  // Exact name or alias only — the fuzzy stage was deleted after measuring it
+  // as net-harmful (see lib/geocode.js catalogLookup).
+  const hit = gazetteer.find((g) => norm(g.name) === n) ||
+              gazetteer.find((g) => g.aliases.some((a) => norm(a) === n));
   if (hit) resolved.set(loc, { lat: hit.lat, lng: hit.lng, method: 'catalog', gazetteer_id: hit.id });
 }
 
@@ -181,12 +177,25 @@ async function runBatch(batch) {
   const anchors = pickAnchors(batch, anchorPool);
   const msg = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 8000,
+    max_tokens: 16000,
     system: geocodingSystemPrompt(),
     messages: [{ role: 'user', content: geocodingUserPrompt(batch, anchors) }]
   });
   const text = msg.content.filter((b) => b.type === 'text').map((b) => b.text).join('');
-  for (const r of parseJsonArray(text)) {
+  let parsed;
+  try {
+    parsed = parseJsonArray(text);
+  } catch (err) {
+    // Keep the raw response: a parse failure costs real money to reproduce,
+    // so the evidence must survive. This run lost two calls to a failure
+    // nobody could inspect afterwards.
+    const dump = join(root, 'db', 'regeocode-badresponse-' + (done + 1) + '.txt');
+    writeFileSync(dump, text);
+    console.log('  batch ' + (++done) + '/' + batches.length + ' FAILED to parse: ' + err.message);
+    console.log('    raw response saved to ' + dump);
+    return;
+  }
+  for (const r of parsed) {
     if (r.confidence !== 'none' && Number.isFinite(r.lat) && Number.isFinite(r.lng) && inBounds(r.lat, r.lng)) {
       resolved.set(r.input, { lat: r.lat, lng: r.lng, method: 'ai' });
     }
@@ -229,7 +238,7 @@ for (let attempt = 2; attempt <= attempts; attempt++) {
       .join(NL);
     const msg = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: 8000,
+      max_tokens: 16000,
       system: geocodingSystemPrompt(),
       messages: [{
         role: 'user',
@@ -245,7 +254,14 @@ for (let attempt = 2; attempt <= attempts; attempt++) {
       }]
     });
     const text = msg.content.filter((b) => b.type === 'text').map((b) => b.text).join('');
-    for (const r of parseJsonArray(text)) {
+    let parsed = [];
+    try {
+      parsed = parseJsonArray(text);
+    } catch (err) {
+      writeFileSync(join(root, 'db', 'regeocode-badresponse-retry.txt'), text);
+      log('  retry batch failed to parse (' + err.message + ') — those keep their original positions');
+    }
+    for (const r of parsed) {
       if (r.confidence !== 'none' && Number.isFinite(r.lat) && Number.isFinite(r.lng) && inBounds(r.lat, r.lng)) {
         improved.push({ loc: r.input, lat: r.lat, lng: r.lng });
       }
