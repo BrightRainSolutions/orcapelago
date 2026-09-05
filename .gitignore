@@ -10,3 +10,7 @@ dev-dist/
 # Orca Network's newsletters are their editorial work. The ingest CLI reads
 # them from here, but they are not ours to redistribute in a public repo.
 docs/sightings-newsletters/
+
+# Pre-migration snapshots taken before writing to production. Local undo,
+# not source: the only copy of geocode_candidates once 007 drops it.
+db/backup-prod-*.json

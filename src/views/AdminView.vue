@@ -1,9 +1,14 @@
 <template>
   <!--
     Shell, not a page. Review needs a full-bleed map, so this is a flex column
-    that fills the viewport; Ingest and Gazetteer get a boxed, scrolling
-    wrapper inside it. Wrapping everything in .page would cap the map at a
-    text column.
+    that fills the viewport; Gazetteer gets a boxed, scrolling wrapper inside
+    it. Wrapping everything in .page would cap the map at a text column.
+
+    Ingesting a newsletter is not here. It is a CLI job — `node
+    scripts/run-ingest.mjs <file>` — because it costs several dollars, runs for
+    twenty minutes, and needs the API key, which is deliberately absent from
+    Netlify so a deployed button can never spend money. A tab that cannot work
+    in production is worse than no tab.
 
     ?tab= and ?sighting= are how the map deep-links into the review editor for
     one specific row.
@@ -24,15 +29,13 @@
 
     <template v-else>
       <nav class="admin-tabs">
-        <button :class="{ active: tab === 'ingest' }" @click="tab = 'ingest'">Ingest</button>
         <button :class="{ active: tab === 'review' }" @click="tab = 'review'">Review queue</button>
         <button :class="{ active: tab === 'gazetteer' }" @click="tab = 'gazetteer'">Gazetteer</button>
         <router-link to="/" class="admin-back">Back to map</router-link>
         <button class="admin-signout" @click="logout">Sign out</button>
       </nav>
 
-      <div v-if="tab === 'ingest'" class="admin-boxed"><IngestPanel /></div>
-      <ReviewQueue v-else-if="tab === 'review'" :open-sighting-id="route.query.sighting ?? null" />
+      <ReviewQueue v-if="tab === 'review'" :open-sighting-id="route.query.sighting ?? null" />
       <div v-else class="admin-boxed"><GazetteerPanel /></div>
     </template>
   </main>
@@ -44,7 +47,6 @@
 import { onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { getAdminToken, setAdminToken, clearAdminToken, validateAdminToken } from '../api/client.js';
-import IngestPanel from '../components/admin/IngestPanel.vue';
 import ReviewQueue from '../components/admin/ReviewQueue.vue';
 import GazetteerPanel from '../components/admin/GazetteerPanel.vue';
 
@@ -55,7 +57,7 @@ const gateError = ref('');
 const checking = ref(false);
 const route = useRoute();
 // Deep link from the map: /admin?tab=review&sighting=<id>
-const tab = ref(route.query.tab ?? 'ingest');
+const tab = ref(route.query.tab ?? 'review');
 
 async function login() {
   checking.value = true;

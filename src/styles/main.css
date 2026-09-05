@@ -462,11 +462,6 @@ a.about-button:hover { background: #fff; color: var(--ink); border-color: var(--
 .admin button:disabled { opacity: 0.5; cursor: default; }
 .admin button.danger { background: #fff; color: #b00020; border-color: #b00020; }
 
-.ingest-title { width: 100%; margin-bottom: 0.5rem; }
-.ingest-text { width: 100%; font-family: ui-monospace, monospace; font-size: 0.8rem; }
-.ingest-actions { display: flex; align-items: center; gap: 0.75rem; margin: 0.5rem 0 1.5rem; }
-.ingest-status.ok { color: #1b7f3b; }
-.ingest-status.err { color: #b00020; }
 
 .admin-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-bottom: 1.5rem; }
 .admin-table th { text-align: left; border-bottom: 2px solid #ddd; padding: 0.3rem 0.4rem; }
