@@ -14,6 +14,28 @@
       to settle a name GNIS holds more than once — Andrews Bay exists in two
       counties, so a gazetteer entry is how you say which one you mean.
     </p>
+    <p class="admin-hint">
+      <strong>An entry records where the PLACE is, not where an animal was.</strong>
+      Put the pin on the dock itself, not offshore of it — these coordinates are
+      handed to the model as authoritative anchors, so a pin 300 yards out
+      teaches it a wrong origin for every future report naming that place.
+    </p>
+
+    <!--
+      Placement is by map, never by typing. The lat/lng inputs remain, because
+      reading back an exact coordinate is useful and pasting a known one is
+      occasionally the fastest route, but the map is the tool: "Place" binds a
+      row to it, clicking or dragging sets that row's coordinates, and nothing
+      is written until Save.
+    -->
+    <div v-if="placing" class="gaz-placer">
+      <div class="gaz-placer-head">
+        <strong>Placing: {{ placingLabel }}</strong>
+        <span class="admin-hint">Click the map or drag the pin. Save the row to keep it.</span>
+        <button class="sp-close" aria-label="Close" @click="placing = null">×</button>
+      </div>
+      <MiniMap :lat="placing.lat ?? undefined" :lng="placing.lng ?? undefined" @place="onPlace" />
+    </div>
 
     <table class="admin-table">
       <thead>
@@ -27,7 +49,10 @@
           <td><input v-model.number="draft.lng" type="number" step="0.0001" class="coord" /></td>
           <td><input v-model="draft.region" /></td>
           <td>manual</td>
-          <td class="row-actions"><button @click="create" :disabled="!draft.name.trim()">Add</button></td>
+          <td class="row-actions">
+            <button :class="{ active: placing === draft }" @click="placing = draft">Place</button>
+            <button @click="create" :disabled="!draft.name.trim() || !placed(draft)">Add</button>
+          </td>
         </tr>
         <tr v-for="g in gazetteer" :key="g.id">
           <td><input v-model="g.name" /></td>
@@ -56,6 +81,7 @@
           <td><input v-model="g.region" /></td>
           <td>{{ g.source }}</td>
           <td class="row-actions">
+            <button :class="{ active: placing === g }" @click="placing = g">Place</button>
             <button @click="update(g)">Save</button>
             <button class="danger" @click="remove(g)">Delete</button>
           </td>
@@ -67,12 +93,31 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { api } from '../../api/client.js';
+import MiniMap from './MiniMap.vue';
 
 const gazetteer = ref([]);
 const statusMsg = ref('');
 const draft = reactive({ name: '', aliases: '', lat: null, lng: null, region: '' });
+
+/**
+ * The row currently bound to the map — the draft, or an existing entry.
+ *
+ * Identity comparison, not an id, so the unsaved draft (which has no id) can be
+ * placed the same way an existing row is.
+ */
+const placing = ref(null);
+const placingLabel = computed(() =>
+  placing.value === draft ? (draft.name.trim() || 'new entry') : (placing.value?.name ?? ''));
+const placed = (r) => Number.isFinite(r.lat) && Number.isFinite(r.lng);
+
+/** Map click or pin drag writes straight onto the row being placed. */
+function onPlace({ lat, lng }) {
+  if (!placing.value) return;
+  placing.value.lat = Number(lat.toFixed(5));
+  placing.value.lng = Number(lng.toFixed(5));
+}
 
 // Newline-delimited, and deduped: the same phrasing twice is never meaningful.
 const NL = String.fromCharCode(10);
@@ -101,6 +146,7 @@ async function create() {
       }
     });
     Object.assign(draft, { name: '', aliases: '', lat: null, lng: null, region: '' });
+    placing.value = null;
     statusMsg.value = 'Added.';
     await load();
   } catch (err) {
@@ -124,6 +170,7 @@ async function update(g) {
 async function remove(g) {
   if (!window.confirm(`Delete "${g.name}" from the gazetteer? Sightings keep their coordinates but lose the link.`)) return;
   await api(`/gazetteer/${g.id}`, { method: 'DELETE', admin: true });
+  if (placing.value === g) placing.value = null;
   await load();
 }
 

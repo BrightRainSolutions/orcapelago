@@ -29,7 +29,8 @@ export default async (req) => {
         select id, newsletter_id, sighting_date::text, sighting_time::text, species,
                species_raw, pod_or_group, individual_ids, count, direction, behaviors,
                detection_methods, location_raw, gazetteer_id, landmark_id, lat, lng,
-               geo_method, needs_review, summary, raw_excerpt, reporter, report_kind
+               geo_method, needs_review, summary, raw_excerpt, reporter, report_kind,
+               ai_reasoning, ai_confidence
         from sightings where id = ${id}`;
       return found
         ? Response.json({ sighting: found }, { headers: { 'Cache-Control': 'no-store' } })

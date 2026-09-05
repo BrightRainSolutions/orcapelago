@@ -1,6 +1,6 @@
 # Orcapelago
 
-A public PWA that maps whale sightings from [Orca Network](https://www.orcanetwork.org/) newsletters. Newsletter text is pasted in by an admin, an AI extraction pipeline turns it into structured sighting records, a growing location catalog resolves named Salish Sea locations to coordinates, and the results render on a MapLibre map.
+A public PWA that maps whale sightings from [Orca Network](https://www.orcanetwork.org/) newsletters. Newsletter text is pasted in by an admin, an AI extraction pipeline turns it into structured sighting records, a growing gazetteer resolves named Salish Sea locations to coordinates, and the results render on a MapLibre map.
 
 A Bright Rain Solutions portfolio project. Public and read-only for visitors; ingestion is admin-only. The data is historical by nature — the source is a digest published days-to-weeks after the fact.
 
@@ -21,7 +21,7 @@ db/                         migrations + gazetteer seed SQL
 lib/                        shared server logic (pure where possible, unit-testable)
   preprocess.js               strip boilerplate, detect SUMMARY, chunk on headers
   extract.js                  Claude extraction per chunk + dedupe
-  geocode.js                  GPS → catalog → AI batch → candidates chain
+  geocode.js                  GPS → gazetteer → landmark → AI → water check
   gps-parse.js                embedded coordinate formats
   prompts.js                  extraction + geocoding prompt templates
   db.js / auth.js             Neon client, X-Admin-Token check
@@ -141,7 +141,7 @@ text. They feed a free geocoding stage after the gazetteer and anchor-seed
 the AI geocoding prompt. To refresh or extend (new state file, updated data):
 
 ```
-node scripts/import-landmarks.mjs path/to/DomesticNames_WA.txt prod
+node db/migrations/import-landmarks.mjs path/to/DomesticNames_WA.txt prod
 ```
 
 Idempotent on `gnis_id`. Class list and bbox live at the top of the script;
@@ -157,6 +157,6 @@ features (CGNDB) are v2, `source='cgndb'`.
 4. Ingest background function: pre-process + chunking, tested against the fixture
 5. Extraction prompt + parsing + persistence
 6. Geocoding chain
-7. Admin UI: paste, status polling, review queue, catalog editor
+7. Admin UI: paste, status polling, review queue, gazetteer editor
 8. About page, PWA polish, attribution
 9. Deploy: Netlify + Neon production

@@ -13,9 +13,9 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { neon } from '@neondatabase/serverless';
-import { landmarkLookup } from '../lib/geocode.js';
+import { landmarkLookup } from '../../lib/geocode.js';
 
-const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const env = {};
 for (const line of readFileSync(join(root, '.env'), 'utf8').split(/\r?\n/)) {
   const m = line.match(/^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(.*?)\s*$/);

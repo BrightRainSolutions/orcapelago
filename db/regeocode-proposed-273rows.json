@@ -1,0 +1,160 @@
+{
+ "generated_for": "August 7, 2026 WS Report",
+ "proposals": [
+  {
+   "location_raw": "west side of San Juan Island",
+   "ids": [
+    "8e124f9d-3945-4c55-9949-4fa406bad7e6"
+   ],
+   "before": {
+    "lat": 48.535,
+    "lng": -123.152
+   },
+   "lat": 48.622246,
+   "lng": -123.04649,
+   "method": "catalog",
+   "gazetteer_id": "bdc48e6c-8f1d-490f-9b0f-3726a7c24e18"
+  },
+  {
+   "location_raw": "Lime Kiln hydrophone and webcam",
+   "ids": [
+    "f75c7e90-3992-420e-bcb2-b973e717a32f"
+   ],
+   "before": {
+    "lat": 48.5165,
+    "lng": -123.1527
+   },
+   "lat": 48.5165,
+   "lng": -123.1578,
+   "method": "catalog",
+   "gazetteer_id": "d9e117e8-247b-4401-9345-2ac4cdbbff29"
+  },
+  {
+   "location_raw": "Mukilteo ferry terminal",
+   "ids": [
+    "47f25324-4716-4279-8d16-7ed46e638c4c",
+    "04eb9431-1683-459c-9ddf-16a0cf9376d4"
+   ],
+   "before": {
+    "lat": 47.9494,
+    "lng": -122.3036
+   },
+   "lat": 47.975894,
+   "lng": -122.342465,
+   "method": "catalog",
+   "gazetteer_id": "21e485ca-d62b-400e-af28-3cb23c6816ee"
+  },
+  {
+   "location_raw": "Clinton North of Ferry",
+   "ids": [
+    "9489b7df-9bfc-449d-ac90-63bd42952607"
+   ],
+   "before": {
+    "lat": 47.9819,
+    "lng": -122.3517
+   },
+   "lat": 47.975894,
+   "lng": -122.342465,
+   "method": "catalog",
+   "gazetteer_id": "21e485ca-d62b-400e-af28-3cb23c6816ee"
+  },
+  {
+   "location_raw": "North shore of Orcas Island",
+   "ids": [
+    "6d3b033d-469f-4549-8e1f-30f279cf7469"
+   ],
+   "before": {
+    "lat": 48.72,
+    "lng": -122.9
+   },
+   "lat": 48.622246,
+   "lng": -123.04649,
+   "method": "catalog",
+   "gazetteer_id": "bdc48e6c-8f1d-490f-9b0f-3726a7c24e18"
+  },
+  {
+   "location_raw": "1 mile north of Smith Island",
+   "ids": [
+    "45009399-284d-4352-8ee0-31d6c104614a"
+   ],
+   "before": {
+    "lat": 48.331,
+    "lng": -122.836
+   },
+   "lat": 48.622246,
+   "lng": -123.04649,
+   "method": "catalog",
+   "gazetteer_id": "bdc48e6c-8f1d-490f-9b0f-3726a7c24e18"
+  },
+  {
+   "location_raw": "east side of Smith Island",
+   "ids": [
+    "01d29686-7a0d-46d9-a2fd-d2ffc2bc7915"
+   ],
+   "before": {
+    "lat": 48.32,
+    "lng": -122.832
+   },
+   "lat": 48.622246,
+   "lng": -123.04649,
+   "method": "catalog",
+   "gazetteer_id": "bdc48e6c-8f1d-490f-9b0f-3726a7c24e18"
+  },
+  {
+   "location_raw": "west side of Allan Island heading north",
+   "ids": [
+    "92df5748-2361-41c5-bc11-1d3ba498187e"
+   ],
+   "before": {
+    "lat": 48.468,
+    "lng": -122.725
+   },
+   "lat": 48.622246,
+   "lng": -123.04649,
+   "method": "catalog",
+   "gazetteer_id": "bdc48e6c-8f1d-490f-9b0f-3726a7c24e18"
+  },
+  {
+   "location_raw": "off Clinton ferry lanes",
+   "ids": [
+    "382e134c-a469-406a-adef-432833fb923d"
+   ],
+   "before": {
+    "lat": 47.975,
+    "lng": -122.37
+   },
+   "lat": 47.975894,
+   "lng": -122.342465,
+   "method": "catalog",
+   "gazetteer_id": "21e485ca-d62b-400e-af28-3cb23c6816ee"
+  },
+  {
+   "location_raw": "N [north] of Pt [Point] Robinson (island side)",
+   "ids": [
+    "006bb553-e85f-4c8c-acac-694c9b0d3b9d"
+   ],
+   "before": {
+    "lat": 47.397,
+    "lng": -122.378
+   },
+   "lat": 48.622246,
+   "lng": -123.04649,
+   "method": "catalog",
+   "gazetteer_id": "bdc48e6c-8f1d-490f-9b0f-3726a7c24e18"
+  },
+  {
+   "location_raw": "east/northeast side of Ewing Island (near Sucia)",
+   "ids": [
+    "87329c29-afe3-4a5a-8d93-9c8404bc2ac2"
+   ],
+   "before": {
+    "lat": 48.76,
+    "lng": -122.89
+   },
+   "lat": 48.622246,
+   "lng": -123.04649,
+   "method": "catalog",
+   "gazetteer_id": "bdc48e6c-8f1d-490f-9b0f-3726a7c24e18"
+  }
+ ]
+}

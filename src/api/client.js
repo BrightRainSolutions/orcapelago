@@ -58,10 +58,17 @@ export async function api(path, { method = 'GET', body, admin = false } = {}) {
   return data;
 }
 
-/** True if the stored admin token is accepted by the backend. */
+/**
+ * True if the stored admin token is accepted by the backend.
+ *
+ * Probes the review queue with limit=1: a needs_review query is admin-only
+ * (get-sightings returns 401 without a token) and returning a single row keeps
+ * the check cheap. It used to probe /geocode-candidates, which no longer
+ * exists — see migration 007.
+ */
 export async function validateAdminToken() {
   try {
-    await api('/geocode-candidates', { admin: true });
+    await api('/sightings?needs_review=true&limit=1', { admin: true });
     return true;
   } catch (err) {
     if (err instanceof ApiError && err.status === 401) return false;

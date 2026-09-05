@@ -58,12 +58,25 @@
       <div class="rq-head"><strong>Edit sighting</strong></div>
 
       <!-- The reporter's own words for the place. Read-only: it is the key the
-           gazetteer and the candidate queue are both keyed on, so editing it
-           here would silently detach the row from both. -->
+           gazetteer is matched on, so editing it here would silently detach
+           the row from it. -->
       <p class="review-raw">{{ selected.location_raw }}</p>
 
       <p v-if="selected.summary" class="review-summary">{{ selected.summary }}</p>
       <blockquote v-if="selected.raw_excerpt" class="review-excerpt">{{ selected.raw_excerpt }}</blockquote>
+
+      <!-- Why the model put the pin here. This is the fastest way to tell a
+           misread of the text ("thought Langley was on the mainland") from a
+           bad offset ("knew the vantage point, went the wrong way"), which is
+           the difference between fixing the prompt and fixing the pin.
+           Collapsed by default so it never competes with the excerpt. -->
+      <details v-if="selected.ai_reasoning" class="review-why">
+        <summary>
+          Why here?
+          <span v-if="selected.ai_confidence" class="review-conf">{{ selected.ai_confidence }} confidence</span>
+        </summary>
+        <p>{{ selected.ai_reasoning }}</p>
+      </details>
 
       <div class="review-fields">
         <label>Species
@@ -81,33 +94,17 @@
       <p class="review-hint">Click the map or drag the pin to place it. Either sets geo method to manual.</p>
 
       <!--
-        One action, not two. The old pair read as alternatives when the second
-        was really the first plus one extra step; saving a place is additive,
-        so it is an optional field on the same Save.
+        Reviewing places the ANIMAL. Naming a PLACE is a different job and it
+        moved to the Gazetteer tab.
+        
+        The two were one action here, and it produced wrong data: reviewing
+        "300 yards out from Vashon Ferry Dock" meant typing the name down to
+        "Vashon Ferry Dock" while the pin stayed 300 yards offshore, so the
+        entry recorded the dock as being out in the water. 6 of 38 entries were
+        built that way. Because entries are also ANCHORS, each one then taught
+        the model a wrong origin for every future phrase naming that place.
       -->
       <div class="review-actions">
-        <!--
-          Opt-in by checkbox, with the name pre-filled from the report's own
-          wording. Pre-filling alone would be risky: a gazetteer full of
-          phrases ("North Beach, Whidbey side") degrades the trigram stage,
-          which is measured — adding one webcam entry once made "off Lime Kiln"
-          ambiguous. The checkbox means nothing is created unless you say so,
-          and the pre-fill means you edit a phrase down to a place rather than
-          typing from scratch.
-        -->
-        <label class="review-place-toggle">
-          <input type="checkbox" v-model="savePlace" />
-          Also save this as a gazetteer place
-        </label>
-        <label v-if="savePlace" class="review-place">
-          Named
-          <input v-model="placeName" placeholder="e.g. Browns Point" />
-        </label>
-        <p v-if="savePlace" class="review-hint">
-          Trim it to the place itself — "North Beach", not "North Beach,
-          Whidbey side" — so future reports naming that place match it. The
-          report's exact wording is stored as an alias either way.
-        </p>
         <button class="review-save" :disabled="saving" @click="save()">
           {{ saveLabel }}
         </button>
@@ -119,7 +116,7 @@
 
 <script setup>
 // Review queue (spec §8.4): flagged sightings with raw_excerpt beside
-// editable fields; mini-map click-placement; optional promote-to-catalog.
+// editable fields; mini-map click-placement. Placing the pin is the whole job.
 import { computed, nextTick, onMounted, reactive, ref } from 'vue';
 import { api } from '../../api/client.js';
 import { SPECIES } from '../../map/species.js';
@@ -138,8 +135,6 @@ const rows = ref([]);
 const truncated = ref(false);
 const selected = ref(null);
 const form = reactive({});
-const placeName = ref('');
-const savePlace = ref(false);
 
 const flaggedCount = computed(() => rows.value.filter((r) => r.needs_review).length);
 
@@ -162,9 +157,7 @@ function inland(s) {
 // map may have been reviewed months ago.
 const saveLabel = computed(() => {
   if (saving.value) return 'Saving…';
-  const gaz = savePlace.value && placeName.value.trim() ? ' & add to gazetteer' : '';
-  if (!selected.value?.needs_review) return `Save changes${gaz}`;
-  return savePlace.value && placeName.value.trim() ? 'Save & add to gazetteer' : 'Save & clear flag';
+  return selected.value?.needs_review ? 'Save & clear flag' : 'Save changes';
 });
 const message = ref('');
 const saving = ref(false);
@@ -191,10 +184,6 @@ function scrollActiveIntoView() {
 function select(s) {
   selected.value = s;
   message.value = '';
-  // Pre-filled from the report's own wording so the field is a starting point
-  // rather than a blank; it is ignored unless the checkbox is ticked.
-  placeName.value = s.location_raw ?? '';
-  savePlace.value = false;
   Object.assign(form, {
     species: s.species,
     sighting_date: s.sighting_date,
@@ -223,9 +212,6 @@ function coordsMoved() {
 }
 
 async function save() {
-  // Cataloguing is opt-in by typing a name; it never replaces the save.
-  let gazetteerMerged = false;
-  const addToGazetteer = savePlace.value && Boolean(placeName.value.trim()) && Number.isFinite(form.lat);
   saving.value = true;
   message.value = '';
   try {
@@ -239,38 +225,8 @@ async function save() {
       needs_review: false
     };
     if (coordsMoved()) patch.geo_method = 'manual';
-    if (addToGazetteer) {
-      const { entry, merged } = await api('/gazetteer', {
-        method: 'POST',
-        admin: true,
-        // The report's exact wording rides along as an alias, so the next
-        // sighting phrased this way resolves free at stage 2 instead of going
-        // to the AI. The Candidates promote path has always done this; this
-        // one did not, while the hint text claimed it did.
-        body: {
-          name: placeName.value.trim(),
-          aliases: selected.value.location_raw && selected.value.location_raw !== placeName.value.trim()
-            ? [selected.value.location_raw]
-            : [],
-          lat: form.lat,
-          lng: form.lng
-        }
-      });
-      patch.gazetteer_id = entry.id;
-      gazetteerMerged = merged === true;
-      // NOT geo_method='catalog'. If the pin was moved, that coordinate came
-      // from a person — the catalogue entry was created FROM it, not the other
-      // way round, so claiming a catalogue lookup misreports provenance. The
-      // coordsMoved() above already marks it manual; gazetteer_id records
-      // which entry it seeded. Future sightings matching that name get
-      // 'catalog' honestly, at ingest.
-    }
     await api(`/sightings/${selected.value.id}`, { method: 'PATCH', admin: true, body: patch });
-    message.value = !addToGazetteer
-      ? 'Saved.'
-      : gazetteerMerged
-        ? `Saved. "${placeName.value.trim()}" already existed — this wording was added as an alias.`
-        : 'Saved, and added to the gazetteer.';
+    message.value = 'Saved.';
 
     // Keep the session moving: the saved row leaves the queue, so the same
     // index is now the next one down. Losing your place after every save is

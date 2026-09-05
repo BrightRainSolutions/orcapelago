@@ -31,7 +31,7 @@ import { neon } from '@neondatabase/serverless';
 const CLASSES = new Set(['Bay', 'Cape', 'Island', 'Bar', 'Beach', 'Cliff', 'Pillar', 'Gut', 'Channel', 'Sea', 'Populated Place']);
 const BBOX = { latMin: 46.9, latMax: 50.0, lngMin: -125.5, lngMax: -121.9 };
 
-const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const env = {};
 for (const line of readFileSync(join(root, '.env'), 'utf8').split(/\r?\n/)) {
   const m = line.match(/^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(.*?)\s*$/);

@@ -1,12 +1,12 @@
 <template>
   <!--
     Shell, not a page. Review needs a full-bleed map, so this is a flex column
-    that fills the viewport; Ingest, Candidates and Gazetteer get a boxed,
-    scrolling wrapper inside it. Wrapping everything in .page would cap the map
-    at a text column.
+    that fills the viewport; Ingest and Gazetteer get a boxed, scrolling
+    wrapper inside it. Wrapping everything in .page would cap the map at a
+    text column.
 
-    ?tab= and ?sighting= are how the map and the Candidates list deep-link into
-    the review editor for one specific row.
+    ?tab= and ?sighting= are how the map deep-links into the review editor for
+    one specific row.
   -->
   <main class="admin admin-shell">
     <template v-if="!authed">
@@ -26,7 +26,6 @@
       <nav class="admin-tabs">
         <button :class="{ active: tab === 'ingest' }" @click="tab = 'ingest'">Ingest</button>
         <button :class="{ active: tab === 'review' }" @click="tab = 'review'">Review queue</button>
-        <button :class="{ active: tab === 'candidates' }" @click="tab = 'candidates'">Candidates</button>
         <button :class="{ active: tab === 'gazetteer' }" @click="tab = 'gazetteer'">Gazetteer</button>
         <router-link to="/" class="admin-back">Back to map</router-link>
         <button class="admin-signout" @click="logout">Sign out</button>
@@ -34,7 +33,6 @@
 
       <div v-if="tab === 'ingest'" class="admin-boxed"><IngestPanel /></div>
       <ReviewQueue v-else-if="tab === 'review'" :open-sighting-id="route.query.sighting ?? null" />
-      <div v-else-if="tab === 'candidates'" class="admin-boxed"><CandidatesPanel /></div>
       <div v-else class="admin-boxed"><GazetteerPanel /></div>
     </template>
   </main>
@@ -48,7 +46,6 @@ import { useRoute } from 'vue-router';
 import { getAdminToken, setAdminToken, clearAdminToken, validateAdminToken } from '../api/client.js';
 import IngestPanel from '../components/admin/IngestPanel.vue';
 import ReviewQueue from '../components/admin/ReviewQueue.vue';
-import CandidatesPanel from '../components/admin/CandidatesPanel.vue';
 import GazetteerPanel from '../components/admin/GazetteerPanel.vue';
 
 // See lib/auth.js — temporary local bypass, removed before deploy.

@@ -27,8 +27,7 @@ worker pool.
 │  PUBLIC          get-sightings · get-newsletters         │
 │                  gazetteer (GET only)                    │
 │  ADMIN           gazetteer (POST/PATCH/DELETE) ·         │
-│                  geocode-candidates · sightings-admin ·  │
-│                  get-ingest-status                       │
+│                  sightings-admin · get-ingest-status     │
 │  BACKGROUND      ingest-newsletter-background (15 min)   │
 │      │                              │                    │
 │      │ lib/db.js (neon over HTTP)   │ Anthropic SDK      │
@@ -254,7 +253,7 @@ Every AI output is treated as **provisional**:
 - Geocoding output is bounds-checked (`inBounds`), and results are written with
   `geo_method='ai'` and `needs_review=true`.
 - `geo_method` is a permanent provenance record on every sighting — `gps`,
-  `catalog`, `ai`, `manual`, or `unresolved` — so you can always ask "how did
+  `gazetteer`, `landmark`, `ai`, `manual`, or `unresolved` — so you can always ask "how did
   this coordinate get here?"
 
 Human promotion is what converts probabilistic output into deterministic data.
@@ -271,14 +270,16 @@ learning loop.
 
 ## 5. The geocoding chain
 
-Applied per sighting, in `lib/geocode.js`. Four stages, first hit wins.
+Applied per sighting, in `lib/geocode.js`. First hit wins, then the water
+check gets a second look at anything the model placed.
 
 | # | Stage | Mechanism | `geo_method` | `needs_review` | Cost |
 |---|---|---|---|---|---|
 | 1 | GPS in report | model-reported coords (bounds-checked), then our own `parseGps` of `location_raw` and `raw_excerpt` | `gps` | false | free |
-| 2 | Gazetteer | exact name → exact alias. **No fuzzy matching** (removed 2026-08-30, see §17) | `catalog` | false | free |
+| 2 | Gazetteer | exact name → exact alias. **No fuzzy matching** (removed 2026-08-30, see §17) | `gazetteer` | false | free |
 | 2b | Landmarks (GNIS) | **unique exact** name match only — duplicates and fuzzy fall through to anchored AI (no trigram threshold separates "Pt Robinson"→Point Robinson 0.588 from "Active Pass"→Active Cove 0.438, 25km wrong) | `landmark` | false | free |
-| 3 | Claude | batched 60 per call, `inBounds` checked; prompt seeded with anchor landmarks named in the batch | `ai` | **true** | billed |
+| 3 | Claude | batched 60 per call, `inBounds` checked; **each description carries its own anchor coordinates** (§22) | `ai` | **true** | billed |
+| 3b | Water check | any stage-3 estimate the marine mask says is on land goes back to the model with its distance inland quoted at it; the retry is kept **only** if it moves the point closer to water | `ai` | **true** | billed |
 | 4 | Nothing worked | — | `unresolved` | **true** | free |
 
 Stage 2 runs **once per distinct `location_raw`**, not once per sighting — the
@@ -307,12 +308,24 @@ and the reason there is no big upfront gazetteer.
 
 ```
 AI-geocoded sighting  → geo_method='ai', needs_review=true
-                      → row in geocode_candidates
-                        (hit_count++ on repeat sightings of the same raw text)
-                      → admin promotes it
-                      → gazetteer row, source='ai_promoted'
+                      → the model's reasoning stored on the row
+                      → admin fixes the pin in the review queue and ticks
+                        "Also save this as a gazetteer place"
+                      → gazetteer row + every sighting sharing that
+                        location_raw backfilled to geo_method='gazetteer'
                       → next ingest resolves it at stage 2 — free, instant
+                      → and it becomes an ANCHOR for every future phrase
+                        that names it
 ```
+
+The last line is the part that compounds. See §19: human review pays off
+through the gazetteer, because a verified place seeds the model on every
+future report that mentions it — not because the model learns.
+
+> **Superseded (2026-09-02).** The loop above used to run through a
+> `geocode_candidates` table with a `hit_count` and promote/reject buttons.
+> Migration 007 removed it; the rest of this section is kept as the record of
+> how it worked and why the count was what it was. See §21.
 
 **`hit_count` = how many flagged sightings a promote would fix.** Candidates are
 served ordered by `hit_count desc`, so the top of the queue is the highest-
@@ -346,38 +359,44 @@ where c.status = 'pending'
   and not exists (select 1 from sightings s where s.location_raw = c.location_raw);
 ```
 
-### Two promotion paths (they are not equivalent)
+### One promotion path (2026-09-02)
 
-1. **`CatalogPanel` → `POST /api/geocode-candidates/:id/promote`** — the bulk
-   path. Creates the gazetteer entry (`source='ai_promoted'`) **and backfills
-   every flagged sighting sharing that exact `location_raw`** — setting them to
-   `geo_method='catalog'`, `needs_review=false` — in one statement. Returns the
-   backfill count. *Use this one.*
+**`ReviewQueue` → "Save & add to gazetteer"**, which now does both jobs:
 
-2. **`ReviewQueue` → "Save & add to gazetteer"** — the per-sighting path. Works
-   from a flagged *sighting*, creates a `source='manual'` gazetteer entry, and
-   patches **only that one sighting**. Right for one-off corrections and
-   mini-map click placement (`geo_method='manual'`); wrong for clearing a large
-   queue.
+- creates or merges the gazetteer entry, with the report's exact wording added
+  as an alias, and
+- **backfills every other flagged sighting sharing that exact `location_raw`**
+  — `geo_method='gazetteer'`, `needs_review=false` — returning the count, which
+  the save message reports ("11 other sightings at this location placed too").
 
-The distinction matters operationally: path 1 can clear dozens of sightings per
-click, path 2 clears exactly one.
+The caller's own row is excluded from the backfill and patched separately,
+because a hand-moved pin is `geo_method='manual'`: the entry was created *from*
+that coordinate, not looked up in it. The backfill touches `needs_review` rows
+only, so it can never overwrite a position a person already settled.
+
+There used to be two paths, and they were not equivalent: `CatalogPanel`'s
+promote had the bulk backfill and the review queue did not, so the leverage
+lived in the panel that was harder to judge from — no map, no water. Migration
+007 deleted that panel; the backfill moved into the save, which is the screen
+that has the map in front of you.
 
 ---
 
 ## 7. Data model notes
 
-Four tables (`db/migrations/001_init.sql`). Full column definitions are in
-spec §4; only the non-obvious parts are here.
+Three tables from `db/migrations/001_init.sql` plus `landmarks` (003) and
+`water_areas`/`water_areas_sub` (005). Full column definitions are in spec §4;
+only the non-obvious parts are here.
 
 - `newsletters` 1 → N `sightings`, `on delete cascade`. Deleting a newsletter
   removes its sightings — the intended re-ingest path.
 - `sightings.gazetteer_id` is a **nullable** FK. Deleting a gazetteer entry nulls
   the link but *keeps the coordinates* (see `gazetteer.mjs` DELETE) — a sighting
   never silently loses its position because of gazetteer editing.
-- `geocode_candidates` is a standalone work queue, not joined to anything. It
-  keys on `location_raw` text, which is why `upsertCandidate` dedupes on that
-  column rather than an ID.
+- `sightings.ai_reasoning` / `ai_confidence` hold the model's own account of a
+  placement. Admin-only in the API, dropped from the map payload, and shown in
+  the review editor under "Why here?". Migration 007 moved them here from a
+  `geocode_candidates` table; see §21.
 - `date_range` is a Postgres `daterange`, written as `[from,to]` and read back
   with `upper(date_range) - 1` because the upper bound is exclusive.
 
@@ -411,8 +430,9 @@ user accounts, no sessions — spec §2.
 
 `lib/auth.js` `isAdmin(req)` is the **only** real enforcement, called at the top
 of every admin function. The client-side gate in `AdminView` is convenience
-only: `validateAdminToken()` simply calls `/api/geocode-candidates` and checks
-whether it gets a 401. The token lives in `localStorage`.
+only: `validateAdminToken()` calls `/api/sightings?needs_review=true&limit=1`
+— a `needs_review` query is admin-gated — and checks whether it gets a 401. The
+token lives in `localStorage`.
 
 `gazetteer.mjs` is method-aware — `GET` is public, everything else calls
 `isAdmin` — because Netlify redirects can't split HTTP methods across functions.
@@ -533,10 +553,10 @@ Two routes were investigated on 2026-08-18 and both rejected:
 - **Borrowing Liberty's POI layers into positron.** They transplant cleanly, but
   the OpenMapTiles `poi` layer is amenity data (cafés, shops, parking) gated to
   `minzoom` 15–16. Coffee shops at street zoom, not shoreline features.
-- **Labelling from the gazetteer.** It looks appealing because the catalogue
-  grows as candidates are promoted, but it conflates two different things. The
+- **Labelling from the gazetteer.** It looks appealing because the gazetteer
+  grows as review work is done, but it conflates two different things. The
   gazetteer is a *geocoding cache* keyed on whatever text a reporter typed, not
-  a place catalogue. Measured against the live queue: of 1,092 pending
+  a list of place names. Measured against the live queue: of 1,092 pending
   candidates, **863 (79%) are positional descriptions** ("west side of San Juan
   Island", "past the buoy from Bangor, closer to Quilcene side") rather than
   names. Of the 229 real names, most are features OSM already knows. And the
@@ -579,7 +599,7 @@ the one case where rehearsing against a throwaway copy clearly beats running
 DDL straight at production. See §11.
 
 **Update 2026-08-19 — landmarks implemented** (migration `003_landmarks.sql`,
-`scripts/import-landmarks.mjs`). Profiling the real `DomesticNames_WA` file
+`db/migrations/import-landmarks.mjs`). Profiling the real `DomesticNames_WA` file
 corrected the roadmap's assumed class list: GNIS files passages, sounds, and
 harbors under **Bay** (Puget Sound itself is class Bay), reefs and shoals
 under **Bar**, and points/heads under **Cape**; there is no Reef, Shoal, or
@@ -626,7 +646,7 @@ schema does not currently say which:
 | Derivation | The coordinate is… |
 |---|---|
 | AI on relational text ("half mile north of Protection Island") | the whale, inferred |
-| catalog/landmark hit ("off Hidden Beach") | the named feature (≈ the seer, for shore reports) |
+| gazetteer/landmark hit ("off Hidden Beach") | the named feature (≈ the seer, for shore reports) |
 | GPS in report | ambiguous — boat marking the animals, or observer's phone pin |
 | hydrophone detection | the sensor, definitively not the whale |
 
@@ -640,9 +660,9 @@ gazetteer provides the nouns, the model parses the prepositions.
 `geo_method='manual'` whenever the coordinate differs from the loaded row —
 map click, pin drag, or typing into the lat/lng fields alike. Adding the
 location to the gazetteer in the same action sets `gazetteer_id` but does NOT
-set `geo_method='catalog'`: the coordinate came from a person and the
+set `geo_method='gazetteer'`: the coordinate came from a person and the
 gazetteer entry was created *from* it, so claiming a gazetteer lookup would
-invert the provenance. Future sightings matching that name get `catalog`
+invert the provenance. Future sightings matching that name get `gazetteer`
 honestly, at ingest. Accepting an AI position unchanged leaves `geo_method`
 alone and only clears `needs_review` — reviewed-and-endorsed is not the same
 as human-placed, and the schema should not blur them.
@@ -702,9 +722,9 @@ Landed this session, in order:
    empty by design; **populates from the next ingest onward** — the next
    newsletter (due ~Aug 21 on current cadence) is its first live test.
 2. **Landmarks layer, database side** (migration 003 +
-   `scripts/import-landmarks.mjs`) — 1,509 GNIS marine features imported,
+   `db/migrations/import-landmarks.mjs`) — 1,509 GNIS marine features imported,
    stage 2b in the geocoding chain (unique-exact only), anchor seeding into
-   the AI prompt, and `scripts/backfill-landmarks.mjs` resolved 64 flagged
+   the AI prompt, and `db/migrations/backfill-landmarks.mjs` resolved 64 flagged
    sightings / retired 44 candidates retroactively. Full reasoning — the
    GNIS class surprises, the no-trigram decision, whale-vs-seer — is in §12's
    2026-08-19 updates and the §5 table.
@@ -732,8 +752,9 @@ Landed this session, in order:
   standing dev branch, production string lives only in Netlify env vars, and
   `run-ingest.mjs` gets an explicit `--prod` guard so content publishing is
   always a stated intention.
-- Work the candidate queue by `hit_count` via `CatalogPanel` (bulk backfill
-  per promote); 1,048 pending after the landmark sweep.
+- Work the review queue worst-first; the gazetteer save backfills the whole
+  cluster (§7). Superseded 2026-09-02: `CatalogPanel` and the candidate queue
+  it worked from are gone (§21).
 - Known gap: no timeout on the per-chunk Anthropic call. A stalled request
   hangs the run indefinitely; phase logging makes it visible but does not cut
   it off.
@@ -758,10 +779,14 @@ name into the review editor's optional field — is the act that moves knowledge
 from the first column to the second. "Catalog" was never a fourth thing, and
 every user-facing string now says candidate, gazetteer, or landmark.
 
-**The stored value `geo_method='catalog'` is deliberately unchanged.** Renaming
-it is a production data migration over ~46 rows plus the writers in
-`lib/geocode.js`, and the label is only ever seen as a provenance badge. Left
-as a known naming wart rather than a silent DDL change.
+**The stored value `geo_method='catalog'` was left unchanged at the time** — a
+production data migration over ~46 rows plus the writers in `lib/geocode.js`,
+for a label only seen as a provenance badge. Kept as a known naming wart.
+
+> **Reversed 2026-09-02 (migration 008).** The wart was the last surviving use
+> of the word, and it survived in the one place a person actually reads it: the
+> badge on every sighting. Two words for one concept is how legacy confusion
+> starts. `catalog` → `gazetteer` in the data and in every writer.
 
 ### Editing a sighting you found on the map
 
@@ -838,7 +863,7 @@ only step that is purely mechanical.
 `ai` is a guess from a phrase, and two near-identical phrasings have landed
 tens of kilometres apart. A proximity query that treats those as equivalent is
 wrong in a way no amount of PostGIS fixes. The fix is a radius column derived
-from `geo_method` — small for gps/manual/catalog/landmark, large and honest for
+from `geo_method` — small for gps/manual/gazetteer/landmark, large and honest for
 ai — so "within 2 km of X" can mean "whose uncertainty circle intersects 2 km
 of X", and answers can state their own confidence.
 
@@ -929,9 +954,9 @@ twice. `max_tokens` is now 16000, and `parseJsonArray` falls back to
 `salvageTruncatedArray`, which extraction had used all along and geocoding never
 reached. 56 of 57 objects now survive that same response.
 
-`regeocode.mjs` also gained per-batch error isolation and dumps any unparseable
-response to `db/regeocode-badresponse-*.txt` — a parse failure costs money to
-reproduce, so the evidence has to outlive the crash.
+Per-batch error isolation came from the same incident: one malformed response
+used to leave every remaining location in the ingest unresolved. A bad batch now
+costs that batch only.
 
 ### What the flag actually means
 
@@ -1009,3 +1034,97 @@ This completes the picture of what the geocoder responds to:
 
 Which means human review compounds through the GAZETTEER, where each verified
 place becomes an anchor for every phrase that names it — not as training data.
+
+## 20. One implementation of the chain (2026-09-02)
+
+`scripts/regeocode.mjs` was a test rig that re-geocoded stored sightings so a
+change could be measured before it shipped. It did its job — the fuzzy removal
+and the anchoring work were both decided on its numbers — but it carried a
+**second copy of the geocoding chain**: its own gazetteer lookup, landmark
+lookup, anchor selection and model call.
+
+Two copies of a chain do not stay equal. This one drifted twice:
+
+- The fuzzy deletion had to be made in both files by hand.
+- **The water check only ever existed in the test rig.** It was measured at
+  42% → 75% in water on a sample, written up, and never reached production.
+  The August 31 ingest ran without it and scored 60.6% in water against the
+  previous newsletter's 71.4%.
+
+The rig is deleted. The water check now lives in `lib/geocode.js` as stage 3b,
+so the ingest gets it. `scripts/score-proposals.mjs` went with it — it only
+ever scored the rig's output file.
+
+### The retry, as it now runs
+
+After stage 3, every AI estimate is tested against `water_areas_sub`. Those
+outside are re-sent in batches of 60, each one quoted back with its measured
+distance inland, and the new answer is kept **only if it is closer to water**
+than the one it replaces. That ratchet is what makes the pass safe to run
+unattended: a retry can improve a position or leave it alone, never worsen it.
+
+The prompt explicitly permits the model to decline. The mask is WDFW's
+Washington recreational marine areas — British Columbia, the outer coast and
+fresh water are genuinely uncovered, and a model ordered to "fix" Telegraph
+Cove would move a right answer. `MAX_ATTEMPTS` is 2: one estimate, one retry.
+
+`callGeocoder()` is now the single place that knows the model, the token
+ceiling and the prompt shape; both passes go through it. That is the structural
+point of the change, not the retry itself.
+
+### One-time work moved to `db/migrations/`
+
+Seven scripts were migrations and data loads that had already run: `apply-002`,
+`apply-003`, `apply-004`, `import-landmarks`, `import-water-areas`,
+`backfill-landmarks`, `add-webcam-gazetteer`. They now sit beside the `.sql`
+they apply, with a README giving the order. `/scripts` is left holding eight
+things a person actually runs.
+
+## 21. Dropping the candidates table (2026-09-02)
+
+`geocode_candidates` was the spec's "AI proposes, human promotes" work queue,
+designed before the review queue existed. It was measured before removal:
+
+| | |
+|---|---|
+| pending candidates | 2,447 |
+| **ever promoted** | **1** |
+| gazetteer entries made through review | 36 |
+
+It was also largely a cache of things already stored. `hit_count` agreed with a
+live `count(*)` over `sightings where needs_review` on **2,284 of 2,287** rows —
+the three that differed were stale, which is what a denormalized counter does
+eventually. **2,099 of 2,422** candidate coordinates were byte-identical to the
+sighting they came from. Only `ai_reasoning` and `ai_confidence` were unique.
+
+So migration 007 puts those two on `sightings` and drops the table. Reasoning is
+worth keeping — it is the fastest way to tell a misread of the text from a bad
+offset, which is the difference between fixing the prompt and fixing the pin:
+
+```
+"Fox Island Pier" [medium]
+  Fox Island Fishing Pier is on the north side of Fox Island in Carr Inlet
+  at approximately 47.248, -122.628. Placing in the water just off the pier.
+```
+
+Storage was not a reason either way: 2,491 reasonings average 135 characters,
+328 kB in the old table against ~317 kB stored per-sighting, because AI
+sightings and distinct location strings run close to 1:1.
+
+**Removed:** the table, `netlify/functions/geocode-candidates.mjs` (66 lines),
+`src/components/admin/CandidatesPanel.vue` (98), the Candidates admin tab, and
+`upsertCandidate` in the geocoder. **Added:** two columns, a collapsed "Why
+here?" block in the review editor, and the cluster backfill described in §7.
+
+Two knock-on repairs the removal forced, both worth noting because neither was
+obvious from the deletion itself:
+
+- **`validateAdminToken()` was probing `/api/geocode-candidates`.** The admin
+  login gate would have broken silently. It now probes
+  `/api/sightings?needs_review=true&limit=1`, which is admin-gated and cheap.
+- **The bulk backfill only existed on the promote path.** See §7 — it moved
+  into the review save rather than being lost.
+
+`ai_reasoning` is admin-only in `get-sightings` (a `case when` that omits the
+column entirely rather than blanking it, matching `raw_excerpt`) and is stripped
+from the GeoJSON map payload, where nothing reads it.

@@ -23,13 +23,13 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 for (const line of readFileSync(join(root, '.env'), 'utf8').split(/\r?\n/)) {
   const m = line.match(/^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(.*?)\s*$/);
   if (m && !m[0].trim().startsWith('#')) process.env[m[1]] ??= m[2].replace(/^["']|["']$/g, '');
 }
 
-const { getSql } = await import('../lib/db.js');
+const { getSql } = await import('../../lib/db.js');
 const sql = getSql();
 const undo = process.argv.includes('--undo');
 

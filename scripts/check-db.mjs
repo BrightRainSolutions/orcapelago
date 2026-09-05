@@ -29,7 +29,7 @@ const tables = await sql`
   where table_schema = 'public' order by 1`;
 console.log('tables:', tables.map((t) => t.table_name).join(', ') || '(none)');
 
-const expected = ['gazetteer', 'geocode_candidates', 'newsletters', 'sightings'];
+const expected = ['gazetteer', 'landmarks', 'newsletters', 'sightings'];
 const missing = expected.filter((t) => !tables.some((r) => r.table_name === t));
 if (missing.length) {
   console.error('FAIL: missing tables:', missing.join(', '));

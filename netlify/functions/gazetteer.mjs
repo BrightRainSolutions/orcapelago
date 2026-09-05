@@ -1,6 +1,6 @@
 // /api/gazetteer — one method-aware function because Netlify redirects
 // can't split methods across functions (spec §7):
-//   GET    /api/gazetteer        public   full catalog
+//   GET    /api/gazetteer        public   the whole gazetteer
 //   POST   /api/gazetteer        admin    create entry
 //   PATCH  /api/gazetteer/:id    admin    edit entry
 //   DELETE /api/gazetteer/:id    admin    remove entry (unlinks sightings)
@@ -29,7 +29,8 @@ export default async (req) => {
     const body = await req.json().catch(() => ({}));
 
     if (req.method === 'POST' && !id) {
-      const { name, lat, lng, aliases = [], region = null, source = 'manual' } = body;
+      const { name, lat, lng, aliases = [], region = null, source = 'manual',
+              backfill_location_raw = null } = body;
       if (!name?.trim() || !Number.isFinite(lat) || !Number.isFinite(lng)) {
         return Response.json({ error: 'name, lat, lng required' }, { status: 400 });
       }
@@ -59,7 +60,36 @@ export default async (req) => {
               ),
               region = coalesce(gazetteer.region, excluded.region)
         returning *, (xmax <> 0) as merged`;
-      return Response.json({ entry: row, merged: row.merged === true }, { status: row.merged ? 200 : 201 });
+
+      // Backfill every OTHER flagged sighting phrased exactly this way.
+      //
+      // This is the leverage that made the old Candidates promote worth using:
+      // one decision clears a whole cluster, because a location string recurs
+      // constantly within and across newsletters. When migration 007 removed
+      // that panel the capability had to come with it, or a location naming
+      // twelve sightings would need twelve identical corrections.
+      //
+      // Deliberately narrow: `needs_review` only, so it can never overwrite a
+      // position a person already settled; and the caller's own sighting is
+      // excluded, because that row is being PATCHed in the same save and may
+      // carry a hand-placed coordinate that differs from the entry's.
+      //
+      // geo_method='gazetteer' is honest here — unlike the caller's row, these
+      // ARE resolved by a gazetteer lookup on the name just created.
+      let backfilled = 0;
+      if (backfill_location_raw) {
+        const rows = await sql`
+          update sightings
+             set lat = ${lat}, lng = ${lng}, gazetteer_id = ${row.id},
+                 geo_method = 'gazetteer', needs_review = false
+           where location_raw = ${backfill_location_raw}
+             and needs_review = true
+             and id <> coalesce(${body.except_sighting_id ?? null}::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
+          returning id`;
+        backfilled = rows.length;
+      }
+      return Response.json({ entry: row, merged: row.merged === true, backfilled },
+                           { status: row.merged ? 200 : 201 });
     }
 
     if (req.method === 'PATCH' && id) {

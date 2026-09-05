@@ -62,7 +62,7 @@ export function fakeSightingsGeojson() {
           direction: DIRECTIONS[Math.floor(rand() * DIRECTIONS.length)],
           behaviors: BEHAVIORS[Math.floor(rand() * BEHAVIORS.length)],
           location_raw: name,
-          geo_method: rand() > 0.3 ? 'catalog' : 'ai',
+          geo_method: rand() > 0.3 ? 'gazetteer' : 'ai',
           reporter: 'Demo Data',
           summary: `Demo sighting near ${name}.`
         }

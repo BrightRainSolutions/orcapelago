@@ -54,14 +54,14 @@ records which stage produced the coordinate, and it is the confidence signal:
 | `geo_method` | How it was derived | Confidence |
 |---|---|---|
 | `gps` | coordinates were written in the report itself | highest |
-| `catalog` | matched the **gazetteer** — a place a human verified | high |
+| `gazetteer` | matched the **gazetteer** — a place a human verified | high |
 | `landmark` | matched a GNIS federal place name, exact and unique | high |
 | `manual` | a person placed this pin by hand during review | high |
 | `ai` | a model estimated the position from free text | **low** |
 | `unresolved` | nothing resolved it | none |
 
-`catalog` is a legacy value for what is now called the gazetteer. Same thing;
-the stored string was not migrated.
+(`catalog` was the old name for `gazetteer`, migrated away in 008. Data
+exported before 2026-09-02 may still carry it — same meaning.)
 
 **`ai` is an estimate, not a measurement.** The model is asked to place phrases
 like "just south of Hat Island" or "mid-channel off Bush Point". It is seeded
@@ -116,12 +116,15 @@ It is "someone looked", not "surveyed".
 - **`landmarks`** — GNIS federal place names, imported wholesale. Reference
   data, matched only on exact and unique names because duplicate names are
   common.
-- **`geocode_candidates`** — a **work queue**, not places. Location strings the
-  AI had to guess at, carrying its reasoning, awaiting promotion or rejection
-  by a human. A candidate is made by the machine; a gazetteer entry is made by
-  a person. Never present a candidate as a confirmed place.
+- **`sightings.ai_reasoning` / `ai_confidence`** — the model's own account of
+  why a sighting sits where it does, on rows with `geo_method='ai'`. Review
+  apparatus, admin-only, and **not a source of truth about places**: it is the
+  machine explaining a guess. A gazetteer entry is made by a person; an AI
+  placement is not. Never present one as a confirmed place.
 
-`pg_trgm` is available for fuzzy name matching.
+  (These replaced a `geocode_candidates` work-queue table in migration 007.)
+
+Name matching is exact only — see `lib/geocode.js` for why fuzzy was removed.
 
 ## Newsletters and time
 

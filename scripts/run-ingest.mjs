@@ -22,6 +22,18 @@ if (!file) {
 }
 const text = readFileSync(resolve(root, file), 'utf8');
 
+// Say which database this is about to write to, before anything expensive
+// happens. The dev/prod switch is a hand-edit of DATABASE_URL in .env, so the
+// only thing standing between a rehearsal and a real content publish is
+// remembering which one is currently pasted in there. An ingest costs several
+// dollars and several hundred rows; it should never be ambiguous where they
+// are going.
+if (!process.env.DATABASE_URL) {
+  console.error('FAIL: DATABASE_URL missing from .env');
+  process.exit(1);
+}
+console.log(`writing to: ${new URL(process.env.DATABASE_URL).host}`);
+
 // Duplicate guard. Every invocation mints a fresh UUID, so nothing downstream
 // notices that this newsletter is already in the database — a stray re-run, or
 // a second launch while the first is still going, silently creates another
@@ -89,6 +101,18 @@ if (nl.status === 'complete') {
     from sightings where newsletter_id = ${id}
     group by geo_method order by n desc`;
   console.log('geo methods:', byMethod);
-  const [cand] = await sql`select count(*)::int as n from geocode_candidates where status = 'pending'`;
-  console.log('pending geocode candidates:', cand.n);
+  // How many AI placements the water mask rejects — the number the geocoding
+  // changes are meant to move. Free: the mask is already in the database.
+  const [water] = await sql`
+    with p as (
+      select st_setsrid(st_makepoint(lng, lat), 4326)::geography g
+      from sightings where newsletter_id = ${id} and geo_method = 'ai' and lat is not null
+    )
+    select count(*)::int as total,
+           count(*) filter (where exists (
+             select 1 from water_areas_sub w where st_covers(w.geom, p.g)))::int as wet
+    from p`;
+  if (water.total) {
+    console.log(`in water: ${water.wet}/${water.total} AI placements (${(100 * water.wet / water.total).toFixed(1)}%)`);
+  }
 }

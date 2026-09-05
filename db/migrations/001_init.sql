@@ -47,7 +47,8 @@ create table sightings (
   lat           double precision,
   lng           double precision,
   geo_method    text not null default 'unresolved',
-                -- gps | catalog | ai | manual | unresolved
+                -- gps | gazetteer | landmark | ai | manual | unresolved
+                -- ('gazetteer' was 'catalog' before migration 008)
   needs_review  boolean not null default false,
 
   summary       text,                 -- one-sentence AI summary

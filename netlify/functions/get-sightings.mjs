@@ -73,6 +73,12 @@ export default async (req) => {
                -- forgets to strip it.
                case when ${admin} then raw_excerpt end as raw_excerpt,
                case when ${admin} then reporter end as reporter,
+               -- The model's account of why it placed this row here. Admin-only
+               -- for the same reason as raw_excerpt: it is review apparatus, not
+               -- public content, and it quotes the report back. (Migration 007
+               -- moved it here from geocode_candidates.)
+               case when ${admin} then ai_reasoning end as ai_reasoning,
+               case when ${admin} then ai_confidence end as ai_confidence,
                -- Metres from the nearest marine water. Computed for the review
                -- queue only — null on the public map, where nothing uses it and
                -- the KNN lookup would cost about a second across the table.
@@ -144,9 +150,11 @@ export default async (req) => {
 
     const features = rows
       .filter((r) => r.lat != null && r.lng != null)
-      // raw_excerpt is for the review editor only — up to 600 chars per row
-      // would bloat the map payload for something the map never shows.
-      .map(({ lat, lng, raw_excerpt, ...props }) => ({
+      // raw_excerpt and ai_reasoning are for the review editor only — up to 600
+      // and ~135 chars per row would bloat the map payload for something the
+      // map never shows. (They are already null for non-admin callers; this
+      // drops the keys as well.)
+      .map(({ lat, lng, raw_excerpt, ai_reasoning, ai_confidence, ...props }) => ({
         type: 'Feature',
         geometry: { type: 'Point', coordinates: [lng, lat] },
         properties: props

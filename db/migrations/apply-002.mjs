@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { neon } from '@neondatabase/serverless';
 
-const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const env = {};
 for (const line of readFileSync(join(root, '.env'), 'utf8').split(/\r?\n/)) {
   const m = line.match(/^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(.*?)\s*$/);
@@ -65,7 +65,7 @@ console.log('test row deleted;', ok ? 'ROUND-TRIP OK' : 'ROUND-TRIP FAILED');
 
 // The real read path, against this target.
 process.env.DATABASE_URL = url;
-const { default: getSightings } = await import('../netlify/functions/get-sightings.mjs');
+const { default: getSightings } = await import('../../netlify/functions/get-sightings.mjs');
 const res = await getSightings(new Request('http://local/api/sightings?limit=3'));
 const body = await res.json();
 const first = body.features?.[0]?.properties ?? {};

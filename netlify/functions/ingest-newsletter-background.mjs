@@ -66,7 +66,7 @@ export default async (req) => {
     }
     log(`extraction done: ${sightings.length} sightings after dedupe${extractWarnings.length ? `, ${extractWarnings.length} warning(s)` : ''}`);
 
-    const { warnings: geoWarnings } = await geocodeSightings(sightings, sql, anthropic);
+    const { warnings: geoWarnings } = await geocodeSightings(sightings, sql, anthropic, log);
     log(`geocoding done${geoWarnings.length ? ` with ${geoWarnings.length} warning(s)` : ''}; inserting ${sightings.length} rows`);
 
     for (const s of sightings) {
@@ -75,12 +75,14 @@ export default async (req) => {
           (newsletter_id, sighting_date, sighting_time, species, species_raw,
            pod_or_group, individual_ids, count, direction, behaviors,
            detection_methods, location_raw, gazetteer_id, landmark_id, lat, lng,
-           geo_method, needs_review, summary, raw_excerpt, reporter, report_kind)
+           geo_method, needs_review, summary, raw_excerpt, reporter, report_kind,
+           ai_reasoning, ai_confidence)
         values
           (${id}, ${s.sighting_date}, ${s.sighting_time}, ${s.species}, ${s.species_raw},
            ${s.pod_or_group}, ${s.individual_ids}, ${s.count}, ${s.direction}, ${s.behaviors},
            ${s.detection_methods}, ${s.location_raw}, ${s.gazetteer_id}, ${s.landmark_id}, ${s.lat}, ${s.lng},
-           ${s.geo_method}, ${s.needs_review}, ${s.summary}, ${s.raw_excerpt}, ${s.reporter}, ${s.report_kind})`;
+           ${s.geo_method}, ${s.needs_review}, ${s.summary}, ${s.raw_excerpt}, ${s.reporter}, ${s.report_kind},
+           ${s.ai_reasoning ?? null}, ${s.ai_confidence ?? null})`;
     }
 
     const warnings = [...preWarnings, ...extractWarnings, ...geoWarnings];
