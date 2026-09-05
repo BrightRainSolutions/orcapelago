@@ -27,8 +27,8 @@ worker pool.
 │  PUBLIC          get-sightings · get-newsletters         │
 │                  gazetteer (GET only)                    │
 │  ADMIN           gazetteer (POST/PATCH/DELETE) ·         │
-│                  sightings-admin · get-ingest-status     │
-│  BACKGROUND      ingest-newsletter-background (15 min)   │
+│                  sightings-admin                         │
+│  (ingest is NOT here — lib/ingest.js, run from the CLI)  │
 │      │                              │                    │
 │      │ lib/db.js (neon over HTTP)   │ Anthropic SDK      │
 └──────┼──────────────────────────────┼───────────────────┘
@@ -72,24 +72,30 @@ If the API is unreachable, `fetchSightings` silently falls back to
 why the frontend was fully workable before the database existed (spec §9 build
 order deliberately puts the map at step 3, before ingest at step 4).
 
-### B · Admin ingest (token)
+### B · Ingest (CLI, not the web)
 
 ```
-Paste in IngestPanel
-  → client generates crypto.randomUUID()
-  → POST /api/ingest { id, text, title? }   → 202 immediately
-  → poll /api/ingest-status?id= every 5s until complete | failed
+node scripts/run-ingest.mjs docs/sightings-newsletters/<file>.txt
+  → mints a uuid, reads .env, builds the Anthropic client
+  → lib/ingest.js  ingestNewsletter({ id, text }, sql, anthropic)
+  → progress to the terminal; throws (exit 1) on failure
 ```
 
-**The client invents the ID, and that is not a stylistic choice.** Netlify
-background functions discard the response body, so the server *cannot* return a
-generated row ID. The client must supply one up front or it has nothing to poll
-on. This single platform constraint shapes the entire ingest API surface. See
-the header comment in `netlify/functions/ingest-newsletter-background.mjs`.
+**There is no ingest endpoint** (changed 2026-09-05, §23). It was a Netlify
+background function, and every part of that had stopped being true: the admin
+panel that called it is gone, `ANTHROPIC_API_KEY` is deliberately absent from
+Netlify so a deployed invocation could never do the work, and the only real
+caller was building a fake `Request` carrying the admin token so the process
+could authenticate to itself.
 
-Why a background function at all: extraction over a full newsletter takes
-minutes, far past the 10s ceiling on a regular function. Background functions
-return 202 and run up to 15 minutes.
+The caller still supplies the id rather than receiving one, but for a different
+reason now: the `newsletters` row is written *before* any slow work, so a run
+that dies mid-extraction leaves a row saying so instead of vanishing.
+
+Historical note, because it explains the old API shape: Netlify background
+functions discard the response body, so the server *could not* return a
+generated row id — the client had to invent one to have something to poll. That
+constraint shaped the whole ingest surface and no longer applies.
 
 ### Update 2026-08-16 — ingest moved to the CLI
 
@@ -106,6 +112,11 @@ persist). The paste box still works and is left in place, but is not the
 supported path for a full newsletter. The review queue and gazetteer are ordinary
 fast functions and are unaffected — they stay in the browser.
 
+> **Superseded 2026-09-05 (§23).** The paste box, the status endpoint and the
+> ingest function are all gone; the pipeline is `lib/ingest.js` and the CLI is
+> its only caller. Keeping a half-working paste box "in place" is what made it
+> worth deleting: it was a button that could start a job it could not finish.
+
 This also retires the two constraints that shaped the ingest API: the
 `-background` suffix and the client-generated UUID both exist only to serve a
 deployed paste box. They're harmless where they are, but nothing depends on
@@ -118,7 +129,7 @@ and catches the silent failure described in §3 stage 1. See the README runbook.
 
 ## 3. The ingest pipeline
 
-Four stages inside `ingest-newsletter-background.mjs`.
+Four stages inside `lib/ingest.js`.
 
 ### Stage 1 · Preprocess — `lib/preprocess.js`
 
@@ -482,15 +493,15 @@ Collected for convenience — each is explained in context above.
 ## 11. Known rough edges
 
 - **N+1 inserts.** Persistence loops one `INSERT` per sighting over an HTTP
-  driver — a 400-sighting newsletter is 400 sequential round trips. Inside the
-  15-minute budget, but a single multi-row insert is the obvious first
-  optimization.
-- **The first insert sits outside the try/catch.** In
-  `ingest-newsletter-background.mjs`, `insert into newsletters` runs *before*
-  the error handler. If it throws (missing table, bad `DATABASE_URL`), no row is
-  written, so the admin UI polls `/api/ingest-status` forever getting 404s —
-  which `IngestPanel` reads as "still starting". A hung spinner instead of an
-  error.
+  driver — a 400-sighting newsletter is 400 sequential round trips. No longer
+  racing a 15-minute function ceiling now that ingest is a CLI job, so this is
+  slowness rather than risk, but a single multi-row insert is still the obvious
+  first optimization.
+- **The first insert sits outside the try/catch.** In `lib/ingest.js`, `insert
+  into newsletters` runs *before* the error handler. If it throws (missing
+  table, bad `DATABASE_URL`), no row is written and nothing records the attempt.
+  Less severe than it was — the CLI now surfaces the throw and exits non-zero,
+  where the old admin panel polled a 404 forever and showed a hung spinner.
 - **Seed coordinates are unverified.** `db/seed-gazetteer.sql` carries its own
   TODO: check each against a chart before trusting production.
 - **PWA icons don't exist.** `vite.config.js` points the manifest at
@@ -1128,3 +1139,39 @@ obvious from the deletion itself:
 `ai_reasoning` is admin-only in `get-sightings` (a `case when` that omits the
 column entirely rather than blanking it, matching `raw_excerpt`) and is stripped
 from the GeoJSON map payload, where nothing reads it.
+
+## 23. Ingest stops being an endpoint (2026-09-05)
+
+`netlify/functions/ingest-newsletter-background.mjs` is now `lib/ingest.js`,
+exporting `ingestNewsletter({ id, text, title }, sql, anthropic, sink)`.
+
+It was a deployed HTTP function, and by the end every part of that was fiction:
+
+- The admin panel that called it was removed the same night.
+- `ANTHROPIC_API_KEY` is deliberately absent from Netlify, so a deployed
+  invocation could authenticate, start, and then fail — it could never do the
+  work it existed to do.
+- The only real caller, `scripts/run-ingest.mjs`, was constructing a fake
+  `Request` with `X-Admin-Token` so the process could authenticate to itself
+  before calling a function in its own process.
+
+So the auth check is gone with the endpoint. Authentication belongs at a
+boundary and there is no boundary any more: the only way to run an ingest is to
+be a person at a terminal who already has `.env`. A run costs several dollars
+and takes twenty minutes, which is the real reason it was never a button.
+
+**Behaviour change:** failures now **throw** after marking the row `failed`.
+The HTTP version swallowed the error and returned 202, which was only coherent
+when nothing was waiting for an answer. `run-ingest.mjs` prints the summary,
+then exits non-zero.
+
+### Three dead redirects, found while doing this
+
+`netlify.toml` was still routing `/api/ingest-status` and
+`/api/geocode-candidates` (both paths) to functions deleted earlier — dangling
+since those removals and not noticed at the time. Removed, along with
+`/api/ingest`. Every redirect now points at a function that exists, and every
+function has a route; a two-line check against the filesystem confirms it.
+
+**Deployed surface is now five functions**: `get-sightings`, `get-newsletters`,
+`get-landmarks`, `gazetteer`, `sightings-admin`.

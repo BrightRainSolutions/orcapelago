@@ -2,13 +2,13 @@
 
 A public PWA that maps whale sightings from [Orca Network](https://www.orcanetwork.org/) newsletters. Newsletter text is pasted in by an admin, an AI extraction pipeline turns it into structured sighting records, a growing gazetteer resolves named Salish Sea locations to coordinates, and the results render on a MapLibre map.
 
-A Bright Rain Solutions portfolio project. Public and read-only for visitors; ingestion is admin-only. The data is historical by nature — the source is a digest published days-to-weeks after the fact.
+A Bright Rain Solutions portfolio project. Public and read-only for visitors; ingestion runs from the maintainer's machine. The data is historical by nature — the source is a digest published days-to-weeks after the fact.
 
 Full specification: [design/orcapelago-spec.md](design/orcapelago-spec.md)
 
 ## Stack
 
-Vue 3 + Vite (PWA) · MapLibre GL JS · OpenFreeMap Liberty basemap + Seascape bathymetry · Netlify (static + functions, ingest as a Background Function) · Neon Postgres · Anthropic API (`claude-sonnet-4-6`).
+Vue 3 + Vite (PWA) · MapLibre GL JS · OpenFreeMap Liberty basemap + Seascape bathymetry · Netlify (static + read/admin functions; ingest is a CLI job, not deployed) · Neon Postgres · Anthropic API (`claude-sonnet-4-6`).
 
 The basemap is isolated in [src/map/basemap.js](src/map/basemap.js); both the basemap and bathymetry can later be swapped to self-hosted PMTiles by changing that one file.
 
@@ -19,13 +19,15 @@ design/                     spec + raw newsletter source material
 docs/sightings-newsletters/ newsletter source text — NOT in the repo, see below
 db/                         migrations + gazetteer seed SQL
 lib/                        shared server logic (pure where possible, unit-testable)
+  ingest.js                   the pipeline: text in, sightings rows out (CLI only)
   preprocess.js               strip boilerplate, detect SUMMARY, chunk on headers
   extract.js                  Claude extraction per chunk + dedupe
   geocode.js                  GPS → gazetteer → landmark → AI → water check
   gps-parse.js                embedded coordinate formats
   prompts.js                  extraction + geocoding prompt templates
   db.js / auth.js             Neon client, X-Admin-Token check
-netlify/functions/          API endpoints (see netlify.toml for /api/* routing)
+netlify/functions/          read + admin API endpoints (netlify.toml routes /api/*)
+                            no ingest endpoint — see lib/ingest.js
 src/                        Vue app: map, sightings table, about, admin
 tests/                      vitest — preprocessing + GPS parsing, no API calls
 ```
@@ -54,10 +56,11 @@ Note: `.git` syncs through Dropbox too, which is fine for one person working one
 
 ## Ingesting a newsletter
 
-Ingest runs from the CLI, not the admin paste box. A real newsletter takes
-longer than Netlify's 15-minute background-function ceiling, so the deployed
-Ingest tab cannot finish one. `run-ingest.mjs` has no such limit and runs the
-identical code path.
+Ingest runs from the CLI. There is no admin paste box and no ingest endpoint —
+a run costs several dollars and takes about twenty minutes, `ANTHROPIC_API_KEY`
+is deliberately kept out of Netlify so a deployed button could never spend
+money, and a real newsletter outlasts the 15-minute background-function ceiling
+anyway. `run-ingest.mjs` calls `lib/ingest.js` directly and has no such limit.
 
 1. **Save the text** to `docs/sightings-newsletters/YYYY-MM-DD-whale-sighting-report.txt`.
 

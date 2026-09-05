@@ -7,16 +7,9 @@
   node_bundler = "esbuild"
 
 # --- API routes -> functions (specific before general) ---
-
-[[redirects]]
-  from = "/api/ingest"
-  to = "/.netlify/functions/ingest-newsletter-background"
-  status = 200
-
-[[redirects]]
-  from = "/api/ingest-status"
-  to = "/.netlify/functions/get-ingest-status"
-  status = 200
+#
+# Ingest has no route: it is a library (lib/ingest.js) run from the CLI,
+# never an endpoint. See that file for why.
 
 [[redirects]]
   from = "/api/sightings/:id"
@@ -46,16 +39,6 @@
 [[redirects]]
   from = "/api/gazetteer"
   to = "/.netlify/functions/gazetteer"
-  status = 200
-
-[[redirects]]
-  from = "/api/geocode-candidates/*"
-  to = "/.netlify/functions/geocode-candidates/:splat"
-  status = 200
-
-[[redirects]]
-  from = "/api/geocode-candidates"
-  to = "/.netlify/functions/geocode-candidates"
   status = 200
 
 # SPA fallback

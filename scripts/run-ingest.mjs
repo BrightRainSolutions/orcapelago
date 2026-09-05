@@ -76,19 +76,19 @@ if (existing.length) {
 const id = randomUUID();
 console.log(`ingesting ${file} (${derivedTitle}) as newsletter ${id}...`);
 
-const { default: ingest } = await import('../netlify/functions/ingest-newsletter-background.mjs');
+const { ingestNewsletter } = await import('../lib/ingest.js');
+const { default: Anthropic } = await import('@anthropic-ai/sdk');
+
 const t0 = Date.now();
-const res = await ingest(
-  new Request('http://local/api/ingest', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Admin-Token': process.env.ADMIN_TOKEN
-    },
-    body: JSON.stringify({ id, text })
-  })
-);
-console.log(`handler returned ${res.status} in ${Math.round((Date.now() - t0) / 1000)}s`);
+let failed = null;
+try {
+  await ingestNewsletter({ id, text }, sql, new Anthropic());
+} catch (err) {
+  // The row is already marked 'failed' with the message; this is for the exit
+  // code and the operator's terminal.
+  failed = err;
+}
+console.log(`finished in ${Math.round((Date.now() - t0) / 1000)}s`);
 
 const [nl] = await sql`
   select status, title, sighting_count, error_message,
@@ -115,4 +115,8 @@ if (nl.status === 'complete') {
   if (water.total) {
     console.log(`in water: ${water.wet}/${water.total} AI placements (${(100 * water.wet / water.total).toFixed(1)}%)`);
   }
+}
+if (failed) {
+  console.error('ingest failed:', failed.message ?? failed);
+  process.exit(1);
 }
