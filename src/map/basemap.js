@@ -31,6 +31,25 @@ export const BASEMAP_STYLE = 'positron';
 export const BASEMAP_STYLE_URL = `https://tiles.openfreemap.org/styles/${BASEMAP_STYLE}`;
 export const SEASCAPE_TILES_BASE = 'https://tiles.openwaters.io/seascape';
 
+/**
+ * Aerial imagery, for the admin coordinate pickers only.
+ *
+ * A vector basemap draws a shoreline, not a dock. Pinning "the very end of the
+ * Vashon ferry terminal" — the point boats actually reach, which is what an
+ * anchor should mean — is guesswork without a photograph underneath.
+ *
+ * Esri's tile order is {z}/{y}/{x}, not the usual {z}/{x}/{y}. Attribution is
+ * required and is carried on the source so MapLibre renders it.
+ *
+ * Not on the public map: it is a placement tool, it is a third-party service
+ * this project does not control, and admin use is one person occasionally
+ * rather than every visitor.
+ */
+export const AERIAL_TILES =
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+export const AERIAL_ATTRIBUTION =
+  'Imagery &copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community';
+
 export const SALISH_SEA_CENTER = [-122.6, 48.2];
 export const DEFAULT_ZOOM = 8;
 

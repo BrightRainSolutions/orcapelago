@@ -69,20 +69,43 @@
             a row has.
           -->
           <td>
+            <!--
+              Bound to TEXT, not to the alias array.
+
+              It used to bind `:value` to `aliases.join(NL)` and re-split on
+              every keystroke. Pressing Enter produced "Alpha\n", splitLines
+              dropped the empty trailing line, `:value` recomputed to "Alpha",
+              and Vue wrote that back — erasing the newline as you typed it.
+              A second alias was literally impossible to enter, and trailing
+              spaces and duplicate lines vanished mid-word for the same reason.
+
+              Editing state is text; stored state is an array; the conversion
+              happens once, on Save.
+            -->
             <textarea
               class="alias-box"
-              :rows="Math.max(2, g.aliases.length)"
-              :value="g.aliases.join(NL)"
-              @input="g.aliases = splitLines($event.target.value)"
+              :rows="Math.max(2, g.aliasText.split(NL).length)"
+              v-model="g.aliasText"
             ></textarea>
           </td>
           <td><input v-model.number="g.lat" type="number" step="0.0001" class="coord" /></td>
           <td><input v-model.number="g.lng" type="number" step="0.0001" class="coord" /></td>
           <td><input v-model="g.region" /></td>
           <td>{{ g.source }}</td>
+          <!--
+            Confirmation belongs ON the row.
+
+            It used to be a single line under the table. With 38 rows, saving
+            row 5 rendered "Saved" hundreds of pixels below the fold — the
+            write succeeded and looked like nothing had happened.
+          -->
           <td class="row-actions">
             <button :class="{ active: placing === g }" @click="placing = g">Place</button>
-            <button @click="update(g)">Save</button>
+            <button
+              :class="{ saved: rowState[g.id] === 'saved', failed: rowState[g.id] === 'failed' }"
+              :disabled="rowState[g.id] === 'saving'"
+              @click="update(g)"
+            >{{ saveLabel(g) }}</button>
             <button class="danger" @click="remove(g)">Delete</button>
           </td>
         </tr>
@@ -107,6 +130,15 @@ const draft = reactive({ name: '', aliases: '', lat: null, lng: null, region: ''
  * Identity comparison, not an id, so the unsaved draft (which has no id) can be
  * placed the same way an existing row is.
  */
+/**
+ * Per-row save feedback: id -> 'saving' | 'saved' | 'failed'.
+ *
+ * reactive(), not ref({}), so assigning and deleting a key by id updates the
+ * button without rebuilding the object each time.
+ */
+const rowState = reactive({});
+const saveLabel = (g) => ({ saving: 'Saving…', saved: 'Saved ✓', failed: 'Failed' })[rowState[g.id]] ?? 'Save';
+
 const placing = ref(null);
 const placingLabel = computed(() =>
   placing.value === draft ? (draft.name.trim() || 'new entry') : (placing.value?.name ?? ''));
@@ -129,7 +161,12 @@ const splitLines = (s) =>
   [...new Set(s.split(CR).join('').split(NL).map((x) => x.trim()).filter(Boolean))];
 
 async function load() {
-  gazetteer.value = (await api('/gazetteer')).gazetteer;
+  // Each row carries an editable text form of its aliases alongside the array.
+  // See the textarea comment: the two must not be the same binding.
+  gazetteer.value = (await api('/gazetteer')).gazetteer.map((g) => ({
+    ...g,
+    aliasText: (g.aliases ?? []).join(NL)
+  }));
 }
 
 async function create() {
@@ -155,14 +192,29 @@ async function create() {
 }
 
 async function update(g) {
+  // Text -> array happens HERE and nowhere else: trim, drop blanks, dedupe.
+  const aliases = splitLines(g.aliasText);
+  rowState[g.id] = 'saving';
   try {
-    await api(`/gazetteer/${g.id}`, {
+    const { entry } = await api(`/gazetteer/${g.id}`, {
       method: 'PATCH',
       admin: true,
-      body: { name: g.name, aliases: g.aliases, lat: g.lat, lng: g.lng, region: g.region }
+      body: { name: g.name, aliases, lat: g.lat, lng: g.lng, region: g.region }
     });
-    statusMsg.value = `Saved "${g.name}".`;
+    // Re-sync from what was actually stored, so the box shows the cleaned form
+    // once the round trip is over rather than whatever was mid-edit. This is
+    // the second half of the confirmation: you watch your three typed lines
+    // become the three stored aliases.
+    g.aliases = entry?.aliases ?? aliases;
+    g.aliasText = g.aliases.join(NL);
+    const n = g.aliases.length;
+    rowState[g.id] = 'saved';
+    statusMsg.value = `Saved "${g.name}" (${n} alias${n === 1 ? '' : 'es'}).`;
+    setTimeout(() => { if (rowState[g.id] === 'saved') delete rowState[g.id]; }, 2500);
   } catch (err) {
+    // Failures persist on the row until the next attempt — no timeout. A
+    // disappearing error is worse than no error.
+    rowState[g.id] = 'failed';
     statusMsg.value = `Save failed: ${err.message}`;
   }
 }

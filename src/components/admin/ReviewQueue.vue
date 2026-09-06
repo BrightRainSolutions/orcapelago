@@ -8,7 +8,7 @@
     selection — re-centering is a watch on lat/lng, not a remount.
   -->
   <section class="review">
-    <MiniMap class="review-map" :lat="form.lat" :lng="form.lng" @place="onPlace" />
+    <MiniMap class="review-map" :lat="form.lat" :lng="form.lng" :focus-key="selected?.id ?? null" @place="onPlace" />
 
     <aside class="review-queue">
       <div class="rq-head">

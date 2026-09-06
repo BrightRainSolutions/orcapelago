@@ -494,7 +494,17 @@ a.about-button:hover { background: #fff; color: var(--ink); border-color: var(--
    then resolve against a flex-determined (indefinite) height — computing to 0.
    Let stretch size it. */
 .review-map { flex: 1 1 auto; min-width: 0; }
-.mini-map { min-height: 0; }
+/* The picker wrapper is the sized element; the canvas fills it absolutely so
+   the Aerial toggle can overlay without MapLibre owning it. */
+.mini-map { min-height: 0; position: relative; }
+.mini-map-canvas { position: absolute; inset: 0; }
+.mini-map-aerial {
+  position: absolute; top: 0.5rem; right: 0.5rem; z-index: 2;
+  padding: 0.3rem 0.6rem !important;
+  font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.07em;
+  background: #fff; border: 1px solid var(--ink); cursor: pointer;
+}
+.mini-map-aerial.active { background: var(--ink); color: #fff; }
 
 /* The gazetteer placer.
    .mini-map carries no height of its own — in the review layout it is stretched
@@ -513,6 +523,9 @@ a.about-button:hover { background: #fff; color: var(--ink); border-color: var(--
 .gaz-placer-head .admin-hint { margin: 0; }
 .gaz-placer-head .sp-close { margin-left: auto; }
 .admin-table .row-actions button.active { background: var(--ink); color: #fff; }
+/* Save feedback on the row itself — see GazetteerPanel for why not under the table. */
+.admin-table .row-actions button.saved { background: #1b7f3b; border-color: #1b7f3b; color: #fff; }
+.admin-table .row-actions button.failed { background: #b00020; border-color: #b00020; color: #fff; }
 
 .review-queue,
 .review-editor {
