@@ -29,9 +29,18 @@ export function clearAdminToken() {
 }
 
 export class ApiError extends Error {
-  constructor(status, message) {
+  /**
+   * @param {number} status
+   * @param {string} message
+   * @param {object|null} [data]  the parsed response body, when there is one.
+   *   Some failures are informational rather than fatal — a 409 from the
+   *   gazetteer carries the GNIS entries it found — and the caller needs the
+   *   detail, not just the sentence.
+   */
+  constructor(status, message, data = null) {
     super(message);
     this.status = status;
+    this.data = data;
   }
 }
 
@@ -53,7 +62,7 @@ export async function api(path, { method = 'GET', body, admin = false } = {}) {
   const text = await res.text();
   const data = text ? JSON.parse(text) : null;
   if (!res.ok) {
-    throw new ApiError(res.status, data?.error ?? `API ${method} ${path} failed: ${res.status}`);
+    throw new ApiError(res.status, data?.error ?? `API ${method} ${path} failed: ${res.status}`, data);
   }
   return data;
 }

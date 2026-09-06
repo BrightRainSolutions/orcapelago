@@ -68,11 +68,13 @@ const rows = all
       select distinct on (location_raw) location_raw, raw_excerpt, lat, lng
       from sightings
       where newsletter_id = ${nl.id} and geo_method in ('ai', 'unresolved')
+        and needs_review = true
       order by location_raw, id`
   : await sql`
       select distinct on (location_raw) location_raw, raw_excerpt, lat, lng
       from sightings
       where newsletter_id = ${nl.id} and geo_method = 'ai' and lat is not null
+        and needs_review = true
       order by location_raw, id`;
 const sample = rows.slice(0, limit);
 const unplaced = sample.filter((r) => r.lat == null).length;
@@ -231,12 +233,16 @@ if (!write) {
 } else {
   // Save the new positions, one statement per distinct location string.
   //
-  // Scoped hard: this newsletter, and only rows still carrying a machine
-  // placement. `geo_method in ('ai','unresolved')` means a pin someone moved by
-  // hand ('manual') or resolved from the gazetteer is never
-  // touched, however this script is invoked. No backup file is written because
-  // the backup is production — this run targets a branch, and the parent still
-  // holds the original positions.
+  // Scoped to this newsletter, and to rows NOBODY HAS REVIEWED.
+  //
+  // `needs_review = true` is the load-bearing half of that filter and it was
+  // missing. geo_method alone is not enough: approving an AI position without
+  // dragging the pin leaves geo_method='ai' and only clears the flag, so a
+  // filter on geo_method matched rows a person had already accepted and
+  // silently re-placed and re-flagged them. It cost 21 of David's reviews on
+  // 2026-09-05 — work he had done hours earlier, reappearing in the queue.
+  //
+  // A human decision is recorded in needs_review, not only in geo_method.
   console.log('');
   let updated = 0;
   let cleared = 0;
@@ -261,6 +267,7 @@ if (!write) {
        where newsletter_id = ${nl.id}
          and location_raw = ${p.location_raw}
          and geo_method in ('ai', 'unresolved')
+         and needs_review = true
       returning id`;
     updated += rowsOut.length;
     byMethod[p.geo_method] = (byMethod[p.geo_method] ?? 0) + rowsOut.length;

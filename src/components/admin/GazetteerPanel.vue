@@ -37,6 +37,26 @@
       <MiniMap :lat="placing.lat ?? undefined" :lng="placing.lng ?? undefined" @place="onPlace" />
     </div>
 
+    <!--
+      Search exists to answer one question before you type a new entry: does
+      this place already exist, possibly under a different name? So it matches
+      ALIASES as well as names — the aliases are where reporter phrasings live,
+      and "Off Harrington Lagoon in Coupeville" is findable by "harrington"
+      only if they are searched.
+    -->
+    <div class="gaz-search">
+      <input
+        v-model="search"
+        type="search"
+        placeholder="Search names and aliases…"
+        @keydown.esc="search = ''"
+      />
+      <span class="admin-hint">
+        {{ search.trim() ? `${visible.length} of ${gazetteer.length}` : `${gazetteer.length} entries` }}
+      </span>
+      <button v-if="search.trim()" @click="search = ''">Clear</button>
+    </div>
+
     <table class="admin-table">
       <thead>
         <tr><th>Name</th><th>Aliases</th><th>Lat</th><th>Lng</th><th>Region</th><th>Source</th><th></th></tr>
@@ -51,11 +71,18 @@
           <td>manual</td>
           <td class="row-actions">
             <button :class="{ active: placing === draft }" @click="placing = draft">Place</button>
-            <button @click="create" :disabled="!draft.name.trim() || !placed(draft)">Add</button>
+            <!-- create() with parens: @click="create" would pass the MouseEvent as
+                 confirmGnis, and a truthy event silently skips the GNIS check. -->
+            <button @click="create()" :disabled="!draft.name.trim() || !placed(draft)">Add</button>
           </td>
         </tr>
-        <tr v-for="g in gazetteer" :key="g.id">
-          <td><input v-model="g.name" /></td>
+        <tr v-for="g in visible" :key="g.id">
+          <td>
+            <input v-model="g.name" />
+            <!-- Say WHY it matched when the hit was on an alias, so you do not
+                 have to scan a textarea of reporter phrasings to find it. -->
+            <p v-if="matchedAlias(g)" class="gaz-match">alias: {{ matchedAlias(g) }}</p>
+          </td>
           <!--
             One alias per LINE, not comma-separated.
 
@@ -122,6 +149,25 @@ import MiniMap from './MiniMap.vue';
 
 const gazetteer = ref([]);
 const statusMsg = ref('');
+const search = ref('');
+
+// Same normalisation the geocoder uses for lookups: case and whitespace only.
+const norm = (x) => (x ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
+
+const visible = computed(() => {
+  const q = norm(search.value);
+  if (!q) return gazetteer.value;
+  return gazetteer.value.filter(
+    (g) => norm(g.name).includes(q) || (g.aliases ?? []).some((a) => norm(a).includes(q))
+  );
+});
+
+/** The alias that matched, when the name did not — shown under the name. */
+function matchedAlias(g) {
+  const q = norm(search.value);
+  if (!q || norm(g.name).includes(q)) return null;
+  return (g.aliases ?? []).find((a) => norm(a).includes(q)) ?? null;
+}
 const draft = reactive({ name: '', aliases: '', lat: null, lng: null, region: '' });
 
 /**
@@ -169,24 +215,48 @@ async function load() {
   }));
 }
 
-async function create() {
+async function create(confirmGnis = false) {
+  const name = draft.name.trim();
   try {
-    await api('/gazetteer', {
+    const { merged } = await api('/gazetteer', {
       method: 'POST',
       admin: true,
       body: {
-        name: draft.name.trim(),
+        name,
         aliases: splitLines(draft.aliases),
         lat: draft.lat,
         lng: draft.lng,
-        region: draft.region.trim() || null
+        region: draft.region.trim() || null,
+        confirm_gnis: confirmGnis
       }
     });
     Object.assign(draft, { name: '', aliases: '', lat: null, lng: null, region: '' });
     placing.value = null;
-    statusMsg.value = 'Added.';
+    // The POST upserts on lower(name), so typing an existing name FOLDS into
+    // that entry rather than creating a second one. Saying "Added." either way
+    // hid a merge behind the word for its opposite.
+    statusMsg.value = merged
+      ? `"${name}" already existed — your aliases were added to it.`
+      : `Added "${name}".`;
     await load();
   } catch (err) {
+    // 409: the name is already in GNIS. Informational, not fatal — the
+    // geocoder already resolves it, but an entry is still how you settle an
+    // ambiguous name or override a coordinate. Ask, then send it again.
+    if (err.status === 409 && err.data?.gnis?.length && !confirmGnis) {
+      const list = err.data.gnis
+        .map((g) => `  ${g.name} (${g.feature_class}${g.county ? ', ' + g.county + ' Co' : ''}) ` +
+                    `${Number(g.lat).toFixed(4)}, ${Number(g.lng).toFixed(4)}`)
+        .join(NL);
+      const ok = window.confirm(
+        `"${name}" is already in GNIS:` + NL + NL + list + NL + NL +
+        'The geocoder already resolves that name, so an entry is usually not needed. ' +
+        'Add one anyway? (Worth it to settle a duplicate name, or to override that coordinate.)'
+      );
+      if (ok) return create(true);
+      statusMsg.value = `Not added — "${name}" is already covered by GNIS.`;
+      return;
+    }
     statusMsg.value = `Add failed: ${err.message}`;
   }
 }
@@ -220,10 +290,24 @@ async function update(g) {
 }
 
 async function remove(g) {
-  if (!window.confirm(`Delete "${g.name}" from the gazetteer? Sightings keep their coordinates but lose the link.`)) return;
-  await api(`/gazetteer/${g.id}`, { method: 'DELETE', admin: true });
-  if (placing.value === g) placing.value = null;
-  await load();
+  // Say what it costs. "Sightings keep their coordinates but lose the link" is
+  // true and useless without a number — some entries place ninety-odd rows.
+  const n = g.sighting_count ?? 0;
+  const cost = n
+    ? `${n} sighting${n === 1 ? '' : 's'} currently link to it. They keep their coordinates but lose the link, and nothing will re-resolve that name.`
+    : 'No sightings link to it.';
+  if (!window.confirm(`Delete "${g.name}" from the gazetteer?
+
+${cost}`)) return;
+  try {
+    await api(`/gazetteer/${g.id}`, { method: 'DELETE', admin: true });
+    if (placing.value === g) placing.value = null;
+    statusMsg.value = `Deleted "${g.name}".`;
+    await load();
+  } catch (err) {
+    // This used to throw into nothing: a failed delete looked like a no-op.
+    statusMsg.value = `Delete failed: ${err.message}`;
+  }
 }
 
 onMounted(load);

@@ -506,6 +506,16 @@ a.about-button:hover { background: #fff; color: var(--ink); border-color: var(--
 }
 .mini-map-aerial.active { background: var(--ink); color: #fff; }
 
+/* Gazetteer search: the "does this already exist?" check, before adding. */
+.gaz-search { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.8rem; }
+.gaz-search input { flex: 0 1 22rem; }
+.gaz-search .admin-hint { margin: 0; white-space: nowrap; }
+/* Which alias matched, under the name. Quiet — it is a search artefact, not data. */
+.gaz-match {
+  margin: 0.2rem 0 0; font-size: 0.64rem; color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+
 /* The gazetteer placer.
    .mini-map carries no height of its own — in the review layout it is stretched
    by a flex parent. The Gazetteer tab is a boxed, scrolling wrapper with no

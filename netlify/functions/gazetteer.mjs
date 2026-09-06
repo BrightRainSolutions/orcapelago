@@ -19,9 +19,12 @@ export default async (req) => {
 
   try {
     if (req.method === 'GET') {
+      // sighting_count answers "what does deleting this cost?" before you are
+      // asked to confirm it, and shows which entries are actually earning.
       const rows = await sql`
-        select id, name, aliases, lat, lng, region, source, created_at
-        from gazetteer order by name`;
+        select g.id, g.name, g.aliases, g.lat, g.lng, g.region, g.source, g.created_at,
+               (select count(*)::int from sightings s where s.gazetteer_id = g.id) as sighting_count
+        from gazetteer g order by g.name`;
       return Response.json({ gazetteer: rows }, { headers: { 'Cache-Control': 'public, max-age=300' } });
     }
 
@@ -48,6 +51,24 @@ export default async (req) => {
       // person who had the map in front of them; a later save should not
       // quietly move a verified position. Move it on the Gazetteer tab, where
       // that is the visible intent.
+      // Is this name already federal data? GNIS resolves ~2,700 marine features
+      // without any help from us, so a gazetteer entry duplicating one is
+      // usually wasted work — but not always: an entry is also how you settle a
+      // name GNIS holds twice, or override a coordinate you disagree with. So
+      // this warns and stops; it does not refuse. `confirm_gnis` is the caller
+      // saying they meant it.
+      if (!body.confirm_gnis) {
+        const gnis = await sql`
+          select name, feature_class, county, lat, lng
+          from landmarks where lower(name) = lower(${name.trim()}) limit 5`;
+        if (gnis.length) {
+          return Response.json(
+            { error: `"${name.trim()}" already exists in GNIS`, gnis },
+            { status: 409 }
+          );
+        }
+      }
+
       const merged = aliases.map((a) => String(a).trim()).filter(Boolean);
       const [row] = await sql`
         insert into gazetteer (name, aliases, lat, lng, region, source)
