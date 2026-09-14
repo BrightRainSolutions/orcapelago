@@ -90,9 +90,17 @@ const onLatest = computed(
   () => Boolean(latest.title) && filters.from === latest.from && filters.to === latest.to
 );
 const heading = computed(() => (onLatest.value ? 'Latest Sightings' : 'Sightings'));
-// Nothing to add on the default view; the date range only earns space once the
-// reader has moved off it.
-const subheading = computed(() => (onLatest.value ? '' : rangeText(filters.from, filters.to)));
+// On launch the dates are pre-filled with the issue's span but the payload is
+// ONE issue, and issues overlap in time. Without saying so, the From/To boxes
+// read as an active filter and a sighting reported in an earlier issue looks
+// missing — the Ballard Locks visit (August 10, reported August 21) was
+// invisible under the August 31 issue's Jul 30 – Aug 22 span until a date was
+// nudged. Say which issue, and how to widen.
+const subheading = computed(() =>
+  onLatest.value
+    ? `Sightings from the latest Orca Network newsletter, ${latest.title.replace(/ WS Report$/i, '')}. Adjust the dates to search all newsletters.`
+    : rangeText(filters.from, filters.to)
+);
 
 /** Shown when a filter hides everything — a bare "0" reads as a broken app. */
 const statusNote = computed(() => {
