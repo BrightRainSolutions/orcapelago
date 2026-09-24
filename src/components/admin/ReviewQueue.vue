@@ -77,7 +77,16 @@
            the row from it. -->
       <p class="review-raw">{{ selected.location_raw }}</p>
 
-      <p v-if="selected.summary" class="review-summary">{{ selected.summary }}</p>
+      <!--
+        The excerpt, not the summary.
+
+        `summary` is the model's one-sentence paraphrase of `raw_excerpt`, so
+        rendering both put the same sentence on screen twice — three times
+        counting the location heading above — and pushed the reasoning and the
+        buttons below the fold. In review the reporter's own words are the
+        thing being judged; a paraphrase of them is noise. The summary is still
+        stored and still shown on the public map.
+      -->
       <blockquote v-if="selected.raw_excerpt" class="review-excerpt">{{ selected.raw_excerpt }}</blockquote>
 
       <!-- Why the model put the pin here. This is the fastest way to tell a

@@ -33,6 +33,7 @@ import maplibregl from 'maplibre-gl';
 import { AERIAL_ATTRIBUTION, AERIAL_TILES, BASEMAP_STYLE_URL, SALISH_SEA_CENTER } from '../../map/basemap.js';
 import { addLandmarkLayers } from '../../map/landmark-layers.js';
 import { fetchLandmarks } from '../../api/landmarks.js';
+import { api } from '../../api/client.js';
 
 const props = defineProps({
   lat: Number,
@@ -167,10 +168,80 @@ onMounted(async () => {
 
   // Labels are context; a failure here must not cost the picker.
   const landmarks = await fetchLandmarks();
-  if (!map || !landmarks.features.length) return;
-  const add = () => addLandmarkLayers(map, landmarks, { minzoomShift: -3 });
-  if (map.isStyleLoaded()) add();
-  else map.once('load', add);
+  if (map && landmarks.features.length) {
+    const add = () => addLandmarkLayers(map, landmarks, { minzoomShift: -3 });
+    if (map.isStyleLoaded()) add();
+    else map.once('load', add);
+  }
+
+  /**
+   * Your own gazetteer entries, drawn on top of the federal labels.
+   *
+   * Without this the picker showed GNIS landmarks only, so adding an entry to
+   * fix a bad placement did not help you place it: Stamm Overlook Park went
+   * into the gazetteer and the review map still had nothing at Stamm. The
+   * entries are the answers you have already worked out — they belong in front
+   * of you while you place a pin.
+   *
+   * Shown at every zoom and styled distinctly from GNIS: 71 entries is a small
+   * set, all of it relevant, and the point is to tell YOUR verified places
+   * apart from the imported ones at a glance.
+   *
+   * Admin pickers only. The public map has no business showing working notes.
+   */
+  try {
+    const { gazetteer } = await api('/gazetteer');
+    if (!map || !gazetteer?.length) return;
+    const data = {
+      type: 'FeatureCollection',
+      features: gazetteer
+        .filter((g) => Number.isFinite(Number(g.lat)) && Number.isFinite(Number(g.lng)))
+        .map((g) => ({
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [Number(g.lng), Number(g.lat)] },
+          properties: { name: g.name }
+        }))
+    };
+    const addGaz = () => {
+      if (!map || map.getSource('gazetteer')) return;
+      map.addSource('gazetteer', { type: 'geojson', data });
+      map.addLayer({
+        id: 'gazetteer-dot',
+        type: 'circle',
+        source: 'gazetteer',
+        paint: {
+          'circle-radius': 3.5,
+          'circle-color': '#B8860B',
+          'circle-stroke-width': 1.5,
+          'circle-stroke-color': '#fff'
+        }
+      });
+      map.addLayer({
+        id: 'gazetteer-label',
+        type: 'symbol',
+        source: 'gazetteer',
+        layout: {
+          'text-field': ['get', 'name'],
+          // MUST be Noto — the glyph endpoint serves nothing else, and a wrong
+          // font name renders no text at all, silently.
+          'text-font': ['Noto Sans Regular'],
+          'text-size': 11,
+          'text-offset': [0, 0.9],
+          'text-anchor': 'top',
+          'text-padding': 3
+        },
+        paint: {
+          'text-color': '#8B6508',
+          'text-halo-color': '#fff',
+          'text-halo-width': 1.4
+        }
+      });
+    };
+    if (map.isStyleLoaded()) addGaz();
+    else map.once('load', addGaz);
+  } catch {
+    // Reference context. A failure here must not cost the picker either.
+  }
 });
 
 let lastFocus = props.focusKey;
