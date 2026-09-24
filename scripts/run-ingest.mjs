@@ -78,17 +78,89 @@ console.log(`ingesting ${file} (${derivedTitle}) as newsletter ${id}...`);
 
 const { ingestNewsletter } = await import('../lib/ingest.js');
 const { default: Anthropic } = await import('@anthropic-ai/sdk');
+const { mkdirSync, writeFileSync } = await import('node:fs');
+
+/**
+ * Every model call, written to disk as it happens.
+ *
+ * db/ingest-runs/<id>/NN-<stage>-request.json  what was sent: model, system
+ *                                               prompt, the batch, the anchors
+ * db/ingest-runs/<id>/NN-<stage>-response.json what came back, usage included
+ *
+ * The Console shows tokens and latency per request but never the body, and
+ * the body is where the process is judged: which anchors a string was handed,
+ * what the model wrote in `reasoning`, where a placement went wrong. Opening
+ * any pair and reading it is the spot check. Gitignored.
+ *
+ * The same wrapper tallies spend, so the run reports a real total instead of
+ * an estimate.
+ */
+const runDir = join(root, 'db', 'ingest-runs', id.slice(0, 8));
+mkdirSync(runDir, { recursive: true });
+const real = new Anthropic();
+let calls = 0, inTok = 0, outTok = 0;
+const stageOf = (p) =>
+  /marine geography/i.test(String(p.system ?? '')) ? 'geocode' : 'extract';
+function record(params) {
+  const n = String(++calls).padStart(2, '0');
+  const stage = stageOf(params);
+  writeFileSync(join(runDir, `${n}-${stage}-request.json`), JSON.stringify(params, null, 2));
+  const t = Date.now();
+  return (msg) => {
+    writeFileSync(join(runDir, `${n}-${stage}-response.json`),
+      JSON.stringify({ ...msg, _elapsed_s: Math.round((Date.now() - t) / 1000) }, null, 2));
+    inTok += msg.usage.input_tokens;
+    outTok += msg.usage.output_tokens;
+    return msg;
+  };
+}
+
+/**
+ * Pass-through proxy, not a hand-written stand-in.
+ *
+ * The first version of this implemented `messages.create` only, and extraction
+ * uses `messages.stream(...).finalMessage()` — streaming is mandatory at
+ * max_tokens 32000. Every chunk failed instantly with "stream is not a
+ * function". A Proxy forwards anything not explicitly wrapped, so the next
+ * method the pipeline reaches for cannot be silently missing.
+ */
+const messages = new Proxy(real.messages, {
+  get(target, prop, receiver) {
+    if (prop === 'create') {
+      return async (params) => record(params)(await target.create(params));
+    }
+    if (prop === 'stream') {
+      // Keep the real stream object — event handlers and all — and only
+      // intercept the point where the finished message is available.
+      return (params) => {
+        const done = record(params);
+        const s = target.stream(params);
+        const final = s.finalMessage.bind(s);
+        s.finalMessage = async () => done(await final());
+        return s;
+      };
+    }
+    const v = Reflect.get(target, prop, receiver);
+    return typeof v === 'function' ? v.bind(target) : v;
+  }
+});
+const anthropic = new Proxy(real, {
+  get: (t, p, r) => (p === 'messages' ? messages : Reflect.get(t, p, r))
+});
+console.log(`model calls will be written to ${runDir}`);
 
 const t0 = Date.now();
 let failed = null;
 try {
-  await ingestNewsletter({ id, text }, sql, new Anthropic());
+  await ingestNewsletter({ id, text }, sql, anthropic);
 } catch (err) {
   // The row is already marked 'failed' with the message; this is for the exit
   // code and the operator's terminal.
   failed = err;
 }
 console.log(`finished in ${Math.round((Date.now() - t0) / 1000)}s`);
+const cost = (inTok * 3 + outTok * 15) / 1e6;
+console.log(`model: ${calls} calls, ${inTok} in / ${outTok} out, $${cost.toFixed(3)}  (bodies in ${runDir})`);
 
 const [nl] = await sql`
   select status, title, sighting_count, error_message,

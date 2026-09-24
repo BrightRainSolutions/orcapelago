@@ -76,22 +76,37 @@ const projectedOut = Math.round(outPerChunk * target.chunks);
 const extractIn = target.total * IN_PER_TOKEN;
 const extractOut = projectedOut * OUT_PER_TOKEN;
 
-// Stage 3 geocoding: distinct unresolved strings, 60 per call, ~80 output
-// tokens each. Small next to extraction, which is the point worth seeing.
+// Stage 3 geocoding, priced PER STRING from measured runs rather than from
+// assumptions about the prompt.
+//
+// The previous constants (2,500 input tokens per call, 80 output tokens per
+// string) predated every change to the geocoder and understated it by more
+// than 3x: per-string anchors add ~200 input tokens to every location, the
+// domain document turned `reasoning` into a full sentence, and the water-check
+// retry re-sends roughly 40% of strings, so a batch of 60 costs ~1.5 calls.
+//
+// Calibrated 2026-09-16 against four production re-geocodes (Jul 15, Jul 29,
+// Aug 7, Aug 31): 1,639 strings, $6.895, 245 input and 231 output tokens per
+// string — within 3% of each other across all four runs. Re-measure if the
+// prompt, the anchor format or the retry policy changes.
+const GEO_IN_PER_STRING = 245;
+const GEO_OUT_PER_STRING = 231;
+const GEO_CALLS_PER_BATCH = 1.54;   // first pass plus the retry pass, measured
+
 const [{ n: distinctSoFar }] = await sql`select count(distinct location_raw)::int n from sightings`;
 const est = {
   locations: Math.round(calRows.length * (target.chunks / calIn.chunks)),
 };
-est.calls = Math.ceil(est.locations / 60);
-const geoIn = est.calls * 2500 * IN_PER_TOKEN;
-const geoOut = est.locations * 80 * OUT_PER_TOKEN;
+est.calls = Math.ceil((est.locations / 60) * GEO_CALLS_PER_BATCH);
+const geoIn = est.locations * GEO_IN_PER_STRING * IN_PER_TOKEN;
+const geoOut = est.locations * GEO_OUT_PER_STRING * OUT_PER_TOKEN;
 
 console.log(`MODEL ${MODEL} — $3/M input, $15/M output`);
 console.log(`system prompt ${systemTokens} tokens, resent on each of ${target.chunks} chunks`);
 console.log(`calibration: ${CALIBRATION_TITLE} emitted ${calOut} output tokens over ${calIn.chunks} chunks (${Math.round(outPerChunk)}/chunk)\n`);
 console.log(`EXTRACTION  ${target.chunks} calls   in ${target.total} tok   out ~${projectedOut} tok`);
 console.log(`            ${money(extractIn)} + ${money(extractOut)} = ${money(extractIn + extractOut)}`);
-console.log(`GEOCODING   ~${est.calls} calls  (~${est.locations} locations)`);
+console.log(`GEOCODING   ~${est.calls} calls incl. retries  (~${est.locations} locations)`);
 console.log(`            ${money(geoIn)} + ${money(geoOut)} = ${money(geoIn + geoOut)}`);
 const total = extractIn + extractOut + geoIn + geoOut;
 console.log(`\nTOTAL       ~${money(total)}   (${distinctSoFar} distinct locations already stored)`);

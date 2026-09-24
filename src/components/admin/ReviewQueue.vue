@@ -17,15 +17,30 @@
              reviewed, so counting it here would misstate the backlog. -->
         <span class="rq-count">{{ flaggedCount }}</span>
       </div>
-      <p v-if="outOfWater" class="admin-hint">
-        Sorted furthest-inland first — {{ outOfWater }} of these sit 100&nbsp;m
-        to 5&nbsp;km from marine water. Freshwater and anything beyond the
+      <!--
+        Two orderings, because they catch different mistakes. Distance is the
+        mask's opinion and is blind to a pin sitting comfortably in the WRONG
+        water; confidence is the model's own, and on the Sept 22 issue it ran
+        65% in water for 'low' against 92% for 'high'. Distance stays the
+        tiebreaker either way.
+      -->
+      <div class="rq-sort">
+        <span>Sort</span>
+        <button :class="{ active: sort === 'distance' }" @click="setSort('distance')">furthest inland</button>
+        <button :class="{ active: sort === 'confidence' }" @click="setSort('confidence')">least confident</button>
+      </div>
+      <p v-if="sort === 'distance' && outOfWater" class="admin-hint">
+        Furthest-inland first — {{ outOfWater }} of these sit 100&nbsp;m to
+        5&nbsp;km from marine water. Freshwater and anything beyond the
         Washington coverage area are excluded, so this is an ordering, not a
         verdict.
       </p>
+      <p v-if="sort === 'confidence'" class="admin-hint">
+        Least-confident first, by the model's own rating, then furthest inland
+        within each band. Catches pins that are in water but the wrong water.
+      </p>
       <p v-if="truncated" class="admin-hint">
-        Showing the first {{ rows.length }}; more remain. Work the Candidates
-        tab first — each promote backfills every sighting sharing that location.
+        Showing the first {{ rows.length }}; more remain.
       </p>
       <div class="review-list">
         <button
@@ -69,8 +84,10 @@
            misread of the text ("thought Langley was on the mainland") from a
            bad offset ("knew the vantage point, went the wrong way"), which is
            the difference between fixing the prompt and fixing the pin.
-           Collapsed by default so it never competes with the excerpt. -->
-      <details v-if="selected.ai_reasoning" class="review-why">
+           Open by default: it is the first thing worth reading on a flagged
+           row, and on a low-confidence one it usually says outright what is
+           wrong ("No anchor provided"). -->
+      <details v-if="selected.ai_reasoning" class="review-why" open>
         <summary>
           Why here?
           <span v-if="selected.ai_confidence" class="review-conf">{{ selected.ai_confidence }} confidence</span>
@@ -105,6 +122,22 @@
         the model a wrong origin for every future phrase naming that place.
       -->
       <div class="review-actions">
+        <!--
+          Some reports cannot be placed by anyone: timestamped updates in a
+          running encounter — "Post meal breach", "same general area as
+          previous report" — where the location lives in the PREVIOUS report.
+
+          Clears the coordinates as well as the flag. That is the point: an
+          unplaceable string the model guessed at anyway leaves a fictional pin
+          on the public map, and dropping the row from the queue without
+          dropping the pin would hide it rather than fix it.
+
+          Not a delete. The sighting is real — species, time, pod, reporter,
+          excerpt — and stays in the record.
+        -->
+        <button class="review-unplaceable" :disabled="saving" @click="markUnplaceable()">
+          Cannot be placed
+        </button>
         <button class="review-save" :disabled="saving" @click="save()">
           {{ saveLabel }}
         </button>
@@ -135,6 +168,15 @@ const rows = ref([]);
 const truncated = ref(false);
 const selected = ref(null);
 const form = reactive({});
+
+/** Review ordering; the server sorts, so changing it refetches. */
+const sort = ref('distance');
+async function setSort(next) {
+  if (sort.value === next) return;
+  sort.value = next;
+  selected.value = null;
+  await load();
+}
 
 const flaggedCount = computed(() => rows.value.filter((r) => r.needs_review).length);
 
@@ -171,7 +213,7 @@ const REVIEW_LIMIT = 5000;
 async function load() {
   // admin: true — needs_review is no longer a public query, and reporter and
   // raw_excerpt only come back for an authenticated caller.
-  const data = await api(`/sightings?needs_review=true&format=json&limit=${REVIEW_LIMIT}`, { admin: true });
+  const data = await api(`/sightings?needs_review=true&format=json&sort=${sort.value}&limit=${REVIEW_LIMIT}`, { admin: true });
   rows.value = data.sightings;
   truncated.value = data.sightings.length >= REVIEW_LIMIT;
 }
@@ -211,6 +253,45 @@ function coordsMoved() {
   return form.lat !== s.lat || form.lng !== s.lng;
 }
 
+/**
+ * Move to the next row after acting on one. The row just handled leaves the
+ * queue, so the same index is now the next one down — losing your place after
+ * every save is what makes a long backlog feel endless.
+ */
+async function advance() {
+  const idx = rows.value.findIndex((r) => r.id === selected.value?.id);
+  await load();
+  const next = rows.value[Math.min(Math.max(idx, 0), rows.value.length - 1)];
+  if (next) { select(next); await nextTick(); scrollActiveIntoView(); }
+  else selected.value = null;
+}
+
+/** "This text does not locate anything." Clears the guess and the flag. */
+async function markUnplaceable() {
+  const s = selected.value;
+  if (!s) return;
+  if (!window.confirm(
+    `Mark as unplaceable?\n\n${s.location_raw}\n\n` +
+    'The sighting stays in the record, but its coordinates are cleared and it ' +
+    'leaves the map and this queue.'
+  )) return;
+  saving.value = true;
+  message.value = '';
+  try {
+    await api(`/sightings/${s.id}`, {
+      method: 'PATCH',
+      admin: true,
+      body: { lat: null, lng: null, geo_method: 'unresolved', needs_review: false }
+    });
+    message.value = 'Marked unplaceable.';
+    await advance();
+  } catch (err) {
+    message.value = `Failed: ${err.message}`;
+  } finally {
+    saving.value = false;
+  }
+}
+
 async function save() {
   saving.value = true;
   message.value = '';
@@ -228,14 +309,7 @@ async function save() {
     await api(`/sightings/${selected.value.id}`, { method: 'PATCH', admin: true, body: patch });
     message.value = 'Saved.';
 
-    // Keep the session moving: the saved row leaves the queue, so the same
-    // index is now the next one down. Losing your place after every save is
-    // what makes a 1,000-row backlog feel endless.
-    const idx = rows.value.findIndex((r) => r.id === selected.value.id);
-    await load();
-    const next = rows.value[Math.min(Math.max(idx, 0), rows.value.length - 1)];
-    if (next) { select(next); await nextTick(); scrollActiveIntoView(); }
-    else selected.value = null;
+    await advance();
   } catch (err) {
     message.value = `Save failed: ${err.message}`;
   } finally {

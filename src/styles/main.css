@@ -498,13 +498,16 @@ a.about-button:hover { background: #fff; color: var(--ink); border-color: var(--
    the Aerial toggle can overlay without MapLibre owning it. */
 .mini-map { min-height: 0; position: relative; }
 .mini-map-canvas { position: absolute; inset: 0; }
-.mini-map-aerial {
+/* `.mini-map .mini-map-aerial`, not `.mini-map-aerial`: the bare class is
+   (0,1,0) and loses to `.admin button` at (0,1,1), so the off state inherited
+   the dark fill and looked identical to the on state. */
+.mini-map .mini-map-aerial {
   position: absolute; top: 0.5rem; right: 0.5rem; z-index: 2;
   padding: 0.3rem 0.6rem !important;
   font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.07em;
-  background: #fff; border: 1px solid var(--ink); cursor: pointer;
+  background: #fff; color: var(--ink); border: 1px solid var(--ink); cursor: pointer;
 }
-.mini-map-aerial.active { background: var(--ink); color: #fff; }
+.mini-map .mini-map-aerial.active { background: var(--ink); color: #fff; }
 
 /* Gazetteer search: the "does this already exist?" check, before adding. */
 .gaz-search { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.8rem; }
@@ -632,6 +635,22 @@ a.about-button:hover { background: #fff; color: var(--ink); border-color: var(--
   display: flex; flex-direction: column; gap: 0.2rem;
   font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-2);
 }
+/* Review ordering toggle. Two ways to say "worst"; see the component. */
+.rq-sort { display: flex; align-items: center; gap: 0.35rem; margin: 0 0 0.5rem; }
+.rq-sort span {
+  font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.07em;
+  color: var(--ink-2); margin-right: 0.15rem;
+}
+/* Colour AND background together. `.admin button` sets both (dark on white
+   text); overriding only the background leaves white text on white — visible
+   only on hover, when the admin rule flips the colour back. */
+.rq-sort button {
+  padding: 0.2rem 0.45rem !important;
+  font-size: 0.64rem; background: #fff; color: var(--ink);
+  border: 1px solid var(--ink-2); cursor: pointer;
+}
+.rq-sort button.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+
 .review-hint { color: var(--ink-2); font-size: 0.7rem; margin: 0 0 0.8rem; }
 .review-actions { display: flex; flex-direction: column; gap: 0.5rem; }
 .review-place {
@@ -639,6 +658,11 @@ a.about-button:hover { background: #fff; color: var(--ink); border-color: var(--
   font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-2);
 }
 .review-save { width: 100%; padding: 0.55rem 0.8rem !important; }
+/* Secondary to Save: a real action, but not the one you reach for. */
+.review-unplaceable {
+  width: 100%; padding: 0.45rem 0.8rem !important; margin-bottom: 0.4rem;
+  font-size: 0.7rem; background: #fff; border: 1px solid var(--ink-2); color: var(--ink-2);
+}
 .review-msg { color: var(--ink); font-size: 0.75rem; }
 
 @media (max-width: 900px) {

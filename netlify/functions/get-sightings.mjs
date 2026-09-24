@@ -45,6 +45,9 @@ export default async (req) => {
   const bbox = q.get('bbox')?.split(',').map(Number) || null;
   const format = q.get('format') || 'geojson';
   const limit = Math.min(parseInt(q.get('limit') || '5000', 10) || 5000, 10000);
+  // Review ordering: 'distance' (default) or 'confidence'. Anything else is
+  // treated as distance rather than erroring — a bad sort is not worth a 400.
+  const sort = q.get('sort') === 'confidence' ? 'confidence' : 'distance';
   const offset = parseInt(q.get('offset') || '0', 10) || 0;
   const includeUnresolved = format === 'json';
   // A needs_review query IS the review queue. It was readable by anyone, which
@@ -108,13 +111,30 @@ export default async (req) => {
                    and lat between ${bbox?.[1] ?? null}::float8 and ${bbox?.[3] ?? null}::float8))
           and (${includeUnresolved} or geo_method <> 'unresolved')
       ) s
-      -- Review runs worst-first, but only within the band where distance means
-      -- error. Ranking on raw distance put Telegraph Cove and Port Hardy at the
-      -- top: Northern Resident sightings 300km up Vancouver Island, correctly
-      -- placed and merely outside Washington's catch areas. Past 5km distance
-      -- measures coverage, not mistakes, so those fall back to date order —
-      -- as do pins within 100m, which is shoreline noise.
+      -- Review runs worst-first. Two ways to say "worst", and they catch
+      -- different mistakes, so the caller picks:
+      --
+      --   distance    how far inland the mask says the pin is. The mask's
+      --               opinion. Blind to a pin that is in the wrong water.
+      --   confidence  what the model said about its own answer. Measured on
+      --               the Sept 22 issue: low 65% in water, medium 84%, high
+      --               92% — well calibrated, and it catches wrong-water pins
+      --               the mask cannot see (a 'low' placement sitting happily
+      --               in Possession Sound because Stamm Road has no anchor).
+      --
+      -- Distance stays the tiebreaker either way, so choosing confidence
+      -- still surfaces the furthest-inland row within each confidence band.
+      --
+      -- The band matters for distance: ranking on raw distance put Telegraph
+      -- Cove and Port Hardy at the top — Northern Resident sightings 300km up
+      -- Vancouver Island, correctly placed and merely outside Washington's
+      -- catch areas. Past 5km distance measures coverage, not mistakes, so
+      -- those fall back to date order, as do pins within 100m, which is
+      -- shoreline noise.
       order by
+        case when ${sort} = 'confidence' then
+          case ai_confidence when 'low' then 1 when 'medium' then 2 when 'high' then 3 else 4 end
+        end asc nulls last,
         case when water_dist_m between 100 and 5000 then water_dist_m end desc nulls last,
         sighting_date desc, sighting_time desc nulls last
       limit ${limit} offset ${offset}`;

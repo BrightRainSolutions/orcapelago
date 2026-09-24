@@ -14,3 +14,8 @@ docs/sightings-newsletters/
 # Pre-migration snapshots taken before writing to production. Local undo,
 # not source: the only copy of geocode_candidates once 007 drops it.
 db/backup-prod-*.json
+
+# Every model request and response from an ingest, for spot checks.
+# Large, local, and carries the full newsletter text.
+db/ingest-runs/
+/docs/input

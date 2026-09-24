@@ -1175,3 +1175,34 @@ function has a route; a two-line check against the filesystem confirms it.
 
 **Deployed surface is now five functions**: `get-sightings`, `get-newsletters`,
 `get-landmarks`, `gazetteer`, `sightings-admin`.
+
+## 24. GNIS has no parks (2026-09-16)
+
+The September 14 issue ingested at **85.5% in water** first pass — better than
+any re-geocoded issue. Spot-checking its reasoning turned up the shape of what
+is left:
+
+- The model's misses are mostly **vantage points** — Hastie Lake County Park,
+  Libbey Beach, the West Beach graffiti wall, Narrows Park, ferry docks. Places
+  reporters stand.
+- **GNIS cannot contain them.** The domestic-names download holds natural
+  features only (streams, lakes, summits, bays, capes); USGS removed parks,
+  piers, ramps and every man-made feature when it reorganised the data. The
+  landmarks table has no Park class because the source has none.
+- Without an anchor the model places from memory, and for the same beach it
+  produced positions 32 km apart across five reports, medium and low confidence
+  each time.
+
+**Next: import vantage points from OpenStreetMap** — parks, nature reserves,
+beaches, piers, slipways, marinas, ferry terminals, viewpoints — within a few
+hundred metres of the Salish Sea shore, into `landmarks` under new classes with
+`source='osm'`. Everything downstream already handles it: `composeAnchors` lets
+gazetteer entries shadow OSM names, `WATER_CLASSES` keeps parks out of stage 2b,
+and the domain document already treats a park anchor as where the observer
+stood. Measure by re-running `anchorsFor` over the unanchored strings before and
+after. Expect another stoplist pass; OSM is full of things called Beach Park.
+
+Also found on the same issue: a reporter-typed GPS one degree off (trusted
+blindly — a >100 km cross-check against the named place would catch it), and
+eight GNIS names that are ordinary words or whale-watch boats (Clipper, Triton,
+South End…) added to `GENERIC_NAMES`.
