@@ -160,6 +160,7 @@
 // Review queue (spec §8.4): flagged sightings with raw_excerpt beside
 // editable fields; mini-map click-placement. Placing the pin is the whole job.
 import { computed, nextTick, onMounted, reactive, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { api } from '../../api/client.js';
 import { SPECIES } from '../../map/species.js';
 import MiniMap from './MiniMap.vue';
@@ -262,12 +263,34 @@ function coordsMoved() {
   return form.lat !== s.lat || form.lng !== s.lng;
 }
 
+const router = useRouter();
+
+/**
+ * Retire the ?sighting= deep link once it has been acted on.
+ *
+ * The param is how the map opens one specific row, and it used to survive
+ * every save. On each mount the component re-fetched that sighting and pinned
+ * it to the top of the list tagged OPENED, so a row saved three times looked
+ * three times like it had not saved at all. It had: geo_method manual,
+ * needs_review false, correct position. Only the URL was stale.
+ *
+ * replace(), not push(): this is tidying an address, not navigation, and it
+ * should not leave a back-button step behind.
+ */
+function clearDeepLink() {
+  if (!props.openSightingId) return;
+  const query = { ...router.currentRoute.value.query };
+  delete query.sighting;
+  router.replace({ query });
+}
+
 /**
  * Move to the next row after acting on one. The row just handled leaves the
  * queue, so the same index is now the next one down — losing your place after
  * every save is what makes a long backlog feel endless.
  */
 async function advance() {
+  clearDeepLink();
   const idx = rows.value.findIndex((r) => r.id === selected.value?.id);
   await load();
   const next = rows.value[Math.min(Math.max(idx, 0), rows.value.length - 1)];

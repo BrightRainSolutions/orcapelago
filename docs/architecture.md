@@ -1193,14 +1193,54 @@ is left:
   produced positions 32 km apart across five reports, medium and low confidence
   each time.
 
-**Next: import vantage points from OpenStreetMap** — parks, nature reserves,
-beaches, piers, slipways, marinas, ferry terminals, viewpoints — within a few
-hundred metres of the Salish Sea shore, into `landmarks` under new classes with
-`source='osm'`. Everything downstream already handles it: `composeAnchors` lets
-gazetteer entries shadow OSM names, `WATER_CLASSES` keeps parks out of stage 2b,
-and the domain document already treats a park anchor as where the observer
-stood. Measure by re-running `anchorsFor` over the unanchored strings before and
-after. Expect another stoplist pass; OSM is full of things called Beach Park.
+**Decided 2026-09-24: look OSM up, do not import it.**
+
+A bulk import was the obvious move and was rejected after walking twelve
+kilometres of one shoreline in Overpass. Four edge cases surfaced before
+leaving west Whidbey: state parks tagged `boundary=protected_area` rather than
+`leisure=park`; county parks present only as their `amenity=parking` lot
+(Hastie Lake); `out center` returning a polygon centroid a kilometre inland of
+the beach people stand on (Fort Ebey); and the same name attached to both a
+park and its lot, needing a dedupe rule. Each has an answer, each answer is a
+heuristic, and the result would be a few thousand unreviewed rows in the anchor
+pool. We already know what unreviewed reference data costs: eight GNIS names
+had to be stoplisted because they are ordinary words or whale-watch boats, and
+"Browns Point" resolved to Bush Point seven times.
+
+So OSM is a **lookup**, used one entry at a time while adding to the gazetteer,
+with the coordinate checked against the surrounding reports before saving. Done
+by hand three times on 2026-09-24 — Norwegian Point Park, Stamm Overlook Park,
+Appletree Cove — and the method is: constrain the place from neighbouring
+sightings, query Overpass by name in a tight bbox, judge the candidates, save
+or decline.
+
+**This is not built.** There is no Overpass code in the repository; those three
+lookups were ad-hoc scripts run in a session. The feature, if it is wanted, is a
+name field and a "Look up" button on the Gazetteer tab: query by name biased to
+the current map view, list candidates with their tags, click one to set the pin.
+Overpass sends CORS headers, so it can go direct from the page with no function
+in between. Use a mirror — `lz4.overpass-api.de` answered when the main host
+returned 504 twice.
+
+### Why the gazetteer is the work, not a workaround
+
+The three entries added that day were three different kinds of gap, and none is
+a pipeline defect:
+
+- **Norwegian Point Park** — a place GNIS cannot contain.
+- **Stamm Overlook Park** — the model was confidently *wrong*, not missing an
+  answer. It placed nine sightings around south Whidbey with fluent reasoning;
+  Stamm Overlook Park is in Edmonds, on the other side of the water, 10 km off.
+- **Appletree Cove** — "Apple Tree Point" is not a real place. It is a
+  portmanteau of Apple Cove Point and Appletree Cove, used consistently enough
+  by the Kingston reporters to have an acronym (ATP). No dataset will ever
+  carry it. Recorded as aliases on the real cove.
+
+Two candidates were **refused** the same day: `Country Club Beach` and
+`Tillicum Beach` both name real places on Camano AND on Anderson Island, 115 km
+apart. A single entry would be one coordinate standing for two places, and a
+gazetteer hit is `needs_review = false` — unreviewable. The model already picks
+the right island from "Camano side" in the text. Refusing is part of the method.
 
 Also found on the same issue: a reporter-typed GPS one degree off (trusted
 blindly — a >100 km cross-check against the named place would catch it), and
