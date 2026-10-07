@@ -5,11 +5,16 @@
 // builds the real system and user prompts for every chunk the preprocessor
 // produces and counts them.
 //
-// Output tokens cannot be known in advance, so they are calibrated against a
-// newsletter already in the database: the stored rows are re-serialised to
-// approximate what extraction actually emitted, counted, and divided by that
-// issue's chunk count. Chunks are sized by the same preprocessor, so
-// tokens-per-chunk transfers between issues better than tokens-per-character.
+// Output tokens cannot be known in advance, so they are projected from the
+// number of report SEPARATORS the preprocessor finds — the `-` / `- ·` lines
+// that divide one report from the next. One separator is roughly one sighting,
+// which is the thing extraction actually emits.
+//
+// This replaced a calibration that re-serialised an already-stored issue's rows
+// and divided by its chunk count. That was wrong twice over: JSON.stringify of
+// the stored columns is denser than the JSON the model streams, and scaling by
+// chunk count assumes every issue has the same reports-per-chunk density. It
+// underquoted the Sept 30 issue by 47% ($1.82 projected, $2.60 spent).
 //
 //   node scripts/estimate-cost.mjs docs/sightings-newsletters/<file>.txt
 import { readFileSync } from 'node:fs';
@@ -30,8 +35,6 @@ const { default: Anthropic } = await import('@anthropic-ai/sdk');
 // claude-sonnet-4-6 list price, $ per million tokens.
 const IN_PER_TOKEN = 3 / 1e6;
 const OUT_PER_TOKEN = 15 / 1e6;
-// The issue used to calibrate output size. Any complete newsletter works.
-const CALIBRATION_TITLE = 'August 7, 2026 WS Report';
 
 const file = process.argv[2];
 if (!file) {
@@ -49,30 +52,38 @@ const countTokens = async (text) =>
 
 const systemTokens = await countTokens(extractionSystemPrompt());
 
+/** Report separators: the `-` or `- ·` lines the newsletter puts between reports. */
+const countSeparators = (chunks) =>
+  chunks.reduce(
+    (n, c) => n + c.text.split(/\r?\n/).filter((l) => /^-(\s*·)?\s*$/.test(l.trim())).length,
+    0
+  );
+
 async function inputTokensFor(path) {
   const r = preprocessNewsletter(readFileSync(resolve(root, path), 'utf8'));
   let user = 0;
   for (const c of r.chunks) user += await countTokens(extractionUserPrompt(c, r.newsletterDate));
   // The system prompt is identical on every call and resent every time.
-  return { chunks: r.chunks.length, user, total: user + systemTokens * r.chunks.length };
+  return {
+    chunks: r.chunks.length,
+    separators: countSeparators(r.chunks),
+    user,
+    total: user + systemTokens * r.chunks.length
+  };
 }
 
-const calRows = await sql`
-  select sighting_date::text, sighting_time::text, species, species_raw, pod_or_group,
-         individual_ids, count, direction, behaviors, detection_methods, location_raw,
-         summary, raw_excerpt, reporter, report_kind
-  from sightings s join newsletters n on n.id = s.newsletter_id
-  where n.title = ${CALIBRATION_TITLE}`;
-if (!calRows.length) {
-  console.error(`FAIL: no rows for calibration issue "${CALIBRATION_TITLE}".`);
-  process.exit(1);
-}
-const calOut = await countTokens(JSON.stringify(calRows));
-const calIn = await inputTokensFor('docs/sightings-newsletters/2026-08-07-whale-sighting-report.txt');
-const outPerChunk = calOut / calIn.chunks;
+// Extraction output per report separator, measured from the logged call
+// bodies of two full production runs (db/ingest-runs):
+//
+//   Sept 22  434 separators  149,202 output tokens   344/sep
+//   Sept 30  478 separators  163,535 output tokens   342/sep
+//
+// Those predict each other within 0.5%, where the old chunk-based calibration
+// was 47% low. Re-measure if the extraction prompt or schema changes.
+const EXTRACT_OUT_PER_SEPARATOR = 343;
 
 const target = await inputTokensFor(file);
-const projectedOut = Math.round(outPerChunk * target.chunks);
+const projectedOut = Math.round(target.separators * EXTRACT_OUT_PER_SEPARATOR);
 const extractIn = target.total * IN_PER_TOKEN;
 const extractOut = projectedOut * OUT_PER_TOKEN;
 
@@ -91,11 +102,19 @@ const extractOut = projectedOut * OUT_PER_TOKEN;
 // prompt, the anchor format or the retry policy changes.
 const GEO_IN_PER_STRING = 245;
 const GEO_OUT_PER_STRING = 231;
-const GEO_CALLS_PER_BATCH = 1.54;   // first pass plus the retry pass, measured
+// First pass plus the retry pass. Was 1.54; the two runs with logged call
+// bodies both came in lower (Sept 30: 12 calls over 9 batches = 1.33), which
+// is why geocoding was over-quoted while extraction was under-quoted.
+const GEO_CALLS_PER_BATCH = 1.33;
+
+// Strings reaching the AI stage, per separator. Not every report yields a
+// distinct location, and GPS, gazetteer and landmark hits resolve before the
+// model is called: Sept 30 sent 498 strings for 478 separators.
+const AI_STRINGS_PER_SEPARATOR = 1.04;
 
 const [{ n: distinctSoFar }] = await sql`select count(distinct location_raw)::int n from sightings`;
 const est = {
-  locations: Math.round(calRows.length * (target.chunks / calIn.chunks)),
+  locations: Math.round(target.separators * AI_STRINGS_PER_SEPARATOR),
 };
 est.calls = Math.ceil((est.locations / 60) * GEO_CALLS_PER_BATCH);
 const geoIn = est.locations * GEO_IN_PER_STRING * IN_PER_TOKEN;
@@ -103,7 +122,8 @@ const geoOut = est.locations * GEO_OUT_PER_STRING * OUT_PER_TOKEN;
 
 console.log(`MODEL ${MODEL} — $3/M input, $15/M output`);
 console.log(`system prompt ${systemTokens} tokens, resent on each of ${target.chunks} chunks`);
-console.log(`calibration: ${CALIBRATION_TITLE} emitted ${calOut} output tokens over ${calIn.chunks} chunks (${Math.round(outPerChunk)}/chunk)\n`);
+console.log(`${target.separators} report separators found — output projected at ${EXTRACT_OUT_PER_SEPARATOR} tok each
+`);
 console.log(`EXTRACTION  ${target.chunks} calls   in ${target.total} tok   out ~${projectedOut} tok`);
 console.log(`            ${money(extractIn)} + ${money(extractOut)} = ${money(extractIn + extractOut)}`);
 console.log(`GEOCODING   ~${est.calls} calls incl. retries  (~${est.locations} locations)`);
