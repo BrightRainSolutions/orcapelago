@@ -44,7 +44,13 @@ if (dry && write) {
 
 const { getSql } = await import('../lib/db.js');
 const { geocodeSightings, composeAnchors, anchorsFor } = await import('../lib/geocode.js');
-const { MODEL, geocodingSystemPrompt, geocodingUserPrompt } = await import('../lib/prompts.js');
+const { GEOCODING_MODEL, geocodingSystemPrompt, geocodingUserPrompt } = await import('../lib/prompts.js');
+
+// Price of GEOCODING_MODEL, $ per million tokens. These were hardcoded at
+// Sonnet's 3/15 and silently under-reported this run by a third once geocoding
+// moved to Opus — the stage has its own model now, so it needs its own prices.
+const GEO_IN_PRICE = 4;
+const GEO_OUT_PRICE = 20;
 const Anthropic = (await import('@anthropic-ai/sdk')).default;
 const sql = getSql();
 console.log('reading: ' + new URL(process.env.DATABASE_URL).host);
@@ -123,7 +129,7 @@ if (dry) {
   for (let i = 0; i < locs.length; i += 60) {
     const b = locs.slice(i, i + 60);
     const counted = await probe.messages.countTokens({
-      model: MODEL,
+      model: GEOCODING_MODEL,
       system: geocodingSystemPrompt(),
       messages: [{
         role: 'user',
@@ -135,7 +141,7 @@ if (dry) {
   const calls = Math.ceil(locs.length / 60);
   const outTok = calls * 7000;                     // ~7k output per 60-item batch, measured
   const retries = Math.ceil(calls * 0.4);          // ~40% of estimates land on land
-  const est = ((inTok * 3 + outTok * 15) / 1e6) * (1 + retries / Math.max(calls, 1));
+  const est = ((inTok * GEO_IN_PRICE + outTok * GEO_OUT_PRICE) / 1e6) * (1 + retries / Math.max(calls, 1));
   console.log(`currently in water: ${wetBefore}/${sample.length} (${pct(wetBefore)})`);
   console.log(`${calls} call(s) plus about ${retries} retry call(s); ${inTok} input tokens`);
   console.log(`ESTIMATED COST  $${est.toFixed(2)}`);
@@ -223,7 +229,7 @@ for (const p of regressions.slice(0, 8)) {
   console.log(`    ${Number(p.was.lat).toFixed(4)},${Number(p.was.lng).toFixed(4)} -> ${p.lat.toFixed(4)},${p.lng.toFixed(4)}`);
 }
 
-const cost = (inTok * 3 + outTok * 15) / 1e6;
+const cost = (inTok * GEO_IN_PRICE + outTok * GEO_OUT_PRICE) / 1e6;
 console.log('');
 console.log(`SPENT  $${cost.toFixed(3)}   (${calls} calls, ${inTok} in / ${outTok} out)`);
 if (!write) {
