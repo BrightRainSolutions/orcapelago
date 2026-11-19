@@ -116,6 +116,44 @@ describe('preprocessNewsletter (fixture)', () => {
     expect(result.newsletterDate).toBe('2026-07-15');
   });
 
+  // The ingest's duplicate guard compares titles, so two spellings of one
+  // publication date MUST produce one title. Before this was normalised,
+  // "Nov 17, 2026" and "November 17, 2026" were two different newsletters to
+  // that guard and the second ingest ran unblocked — several hundred duplicate
+  // sightings and another ~200K output tokens.
+  it.each([
+    ['November 17, 2026', 'November 17, 2026'],
+    ['Nov 17, 2026',      'November 17, 2026'],
+    ['Sept 3, 2026',      'September 3, 2026'],
+    ['Sep 3, 2026',       'September 3, 2026'],
+    ['August 07, 2026',   'August 7, 2026']
+  ])('normalises the date line %s to the title %s', (line, expected) => {
+    const r = preprocessNewsletter(`${line}
+
+SUMMARY
+
+nothing here
+`);
+    expect(r.title).toBe(expected);
+  });
+
+  it('gives one title to both spellings of the same date', () => {
+    const a = preprocessNewsletter(`Nov 17, 2026
+
+SUMMARY
+
+x
+`);
+    const b = preprocessNewsletter(`November 17, 2026
+
+SUMMARY
+
+x
+`);
+    expect(a.title).toBe(b.title);
+    expect(a.newsletterDate).toBe(b.newsletterDate);
+  });
+
   it('captures the SUMMARY section separately', () => {
     expect(result.summaryText).toContain("Bigg's Killer Whales - On July 3");
     expect(allChunkText).not.toContain('Sightings through July 10');

@@ -155,16 +155,19 @@ const real = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 let inTok = 0;
 let outTok = 0;
 let calls = 0;
+// Geocoding calls `beta.messages.create` for server-side fallback; the plain
+// `messages` surface stays because this stand-in is hand-written and the next
+// thing lib/ reaches for should not be silently missing.
+const tally = (create) => async (params) => {
+  const msg = await create(params);
+  inTok += msg.usage.input_tokens;
+  outTok += msg.usage.output_tokens;
+  calls++;
+  return msg;
+};
 const anthropic = {
-  messages: {
-    create: async (params) => {
-      const msg = await real.messages.create(params);
-      inTok += msg.usage.input_tokens;
-      outTok += msg.usage.output_tokens;
-      calls++;
-      return msg;
-    }
-  }
+  messages: { create: tally((p) => real.messages.create(p)) },
+  beta: { messages: { create: tally((p) => real.beta.messages.create(p)) } }
 };
 
 const trial = sample.map((r) => ({ location_raw: r.location_raw, raw_excerpt: r.raw_excerpt }));

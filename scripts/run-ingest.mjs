@@ -98,7 +98,20 @@ const { mkdirSync, writeFileSync } = await import('node:fs');
 const runDir = join(root, 'db', 'ingest-runs', id.slice(0, 8));
 mkdirSync(runDir, { recursive: true });
 const real = new Anthropic();
-let calls = 0, inTok = 0, outTok = 0;
+// Per million tokens, per stage. The two stages run different models (see
+// MODEL and GEOCODING_MODEL in lib/prompts.js), and the old tally priced every
+// token at Sonnet's $3/$15 — so the November 17 run reported $3.856 for a bill
+// that was really $4.335. Under-reporting spend is the one direction a number
+// shown to the person paying must never be wrong in.
+const PRICES = {
+  extract: { in: 3, out: 15 },   // claude-sonnet-4-6
+  geocode: { in: 4, out: 20 }    // claude-opus-5-5
+};
+let calls = 0;
+const spend = {
+  extract: { in: 0, out: 0, calls: 0 },
+  geocode: { in: 0, out: 0, calls: 0 }
+};
 const stageOf = (p) =>
   /marine geography/i.test(String(p.system ?? '')) ? 'geocode' : 'extract';
 function record(params) {
@@ -109,8 +122,9 @@ function record(params) {
   return (msg) => {
     writeFileSync(join(runDir, `${n}-${stage}-response.json`),
       JSON.stringify({ ...msg, _elapsed_s: Math.round((Date.now() - t) / 1000) }, null, 2));
-    inTok += msg.usage.input_tokens;
-    outTok += msg.usage.output_tokens;
+    spend[stage].in += msg.usage.input_tokens;
+    spend[stage].out += msg.usage.output_tokens;
+    spend[stage].calls++;
     return msg;
   };
 }
@@ -124,28 +138,43 @@ function record(params) {
  * function". A Proxy forwards anything not explicitly wrapped, so the next
  * method the pipeline reaches for cannot be silently missing.
  */
-const messages = new Proxy(real.messages, {
-  get(target, prop, receiver) {
+const wrapMessages = (target) => new Proxy(target, {
+  get(t, prop, receiver) {
     if (prop === 'create') {
-      return async (params) => record(params)(await target.create(params));
+      return async (params) => record(params)(await t.create(params));
     }
     if (prop === 'stream') {
       // Keep the real stream object — event handlers and all — and only
       // intercept the point where the finished message is available.
       return (params) => {
         const done = record(params);
-        const s = target.stream(params);
+        const s = t.stream(params);
         const final = s.finalMessage.bind(s);
         s.finalMessage = async () => done(await final());
         return s;
       };
     }
-    const v = Reflect.get(target, prop, receiver);
-    return typeof v === 'function' ? v.bind(target) : v;
+    const v = Reflect.get(t, prop, receiver);
+    return typeof v === 'function' ? v.bind(t) : v;
+  }
+});
+
+// Both surfaces, because geocoding moved to `beta.messages` for server-side
+// fallback. Wrapping only `messages` would have left every geocoding call
+// unrecorded and untallied — the run would still work, and the run directory
+// and the cost line would quietly cover extraction alone.
+const messages = wrapMessages(real.messages);
+const betaMessages = wrapMessages(real.beta.messages);
+const beta = new Proxy(real.beta, {
+  get: (t, p, r) => {
+    if (p === 'messages') return betaMessages;
+    const v = Reflect.get(t, p, r);
+    return typeof v === 'function' ? v.bind(t) : v;
   }
 });
 const anthropic = new Proxy(real, {
-  get: (t, p, r) => (p === 'messages' ? messages : Reflect.get(t, p, r))
+  get: (t, p, r) =>
+    p === 'messages' ? messages : p === 'beta' ? beta : Reflect.get(t, p, r)
 });
 console.log(`model calls will be written to ${runDir}`);
 
@@ -159,8 +188,14 @@ try {
   failed = err;
 }
 console.log(`finished in ${Math.round((Date.now() - t0) / 1000)}s`);
-const cost = (inTok * 3 + outTok * 15) / 1e6;
-console.log(`model: ${calls} calls, ${inTok} in / ${outTok} out, $${cost.toFixed(3)}  (bodies in ${runDir})`);
+let cost = 0;
+for (const [stage, s] of Object.entries(spend)) {
+  if (!s.calls) continue;
+  const c = (s.in * PRICES[stage].in + s.out * PRICES[stage].out) / 1e6;
+  cost += c;
+  console.log(`  ${stage.padEnd(8)} ${String(s.calls).padStart(2)} calls  ${s.in} in / ${s.out} out  $${c.toFixed(3)}`);
+}
+console.log(`model: ${calls} calls, $${cost.toFixed(3)} total  (bodies in ${runDir})`);
 
 const [nl] = await sql`
   select status, title, sighting_count, error_message,

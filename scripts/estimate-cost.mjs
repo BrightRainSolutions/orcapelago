@@ -28,7 +28,7 @@ for (const line of readFileSync(join(root, '.env'), 'utf8').split(/\r?\n/)) {
 }
 
 const { preprocessNewsletter } = await import('../lib/preprocess.js');
-const { MODEL, extractionSystemPrompt, extractionUserPrompt } = await import('../lib/prompts.js');
+const { MODEL, GEOCODING_MODEL, extractionSystemPrompt, extractionUserPrompt } = await import('../lib/prompts.js');
 const { getSql } = await import('../lib/db.js');
 const { default: Anthropic } = await import('@anthropic-ai/sdk');
 
@@ -96,16 +96,23 @@ const extractOut = projectedOut * OUT_PER_TOKEN;
 // domain document turned `reasoning` into a full sentence, and the water-check
 // retry re-sends roughly 40% of strings, so a batch of 60 costs ~1.5 calls.
 //
-// Calibrated 2026-09-16 against four production re-geocodes (Jul 15, Jul 29,
-// Aug 7, Aug 31): 1,639 strings, $6.895, 245 input and 231 output tokens per
-// string — within 3% of each other across all four runs. Re-measure if the
-// prompt, the anchor format or the retry policy changes.
-const GEO_IN_PER_STRING = 245;
-const GEO_OUT_PER_STRING = 231;
-// First pass plus the retry pass. Was 1.54; the two runs with logged call
-// bodies both came in lower (Sept 30: 12 calls over 9 batches = 1.33), which
-// is why geocoding was over-quoted while extraction was under-quoted.
-const GEO_CALLS_PER_BATCH = 1.33;
+// Recalibrated 2026-10-28, after geocoding moved to Opus 5.5 (the stage has
+// its own model now — see GEOCODING_MODEL in lib/prompts.js). Measured across
+// ten production re-geocodes: ~240 input and ~270 output tokens per string.
+// Opus thinks on every request and that reasoning bills as output, but it only
+// costs ~19% more output than Sonnet's 231, not the several-fold I expected.
+const GEO_IN_PER_STRING = 240;
+const GEO_OUT_PER_STRING = 270;
+// First pass plus the retry pass. Was 1.33 on Sonnet; Opus fails the water
+// check about a third as often (10% of first-pass estimates against Sonnet's
+// 33%), so far fewer strings reach the retry.
+const GEO_CALLS_PER_BATCH = 1.2;
+
+// Geocoding is priced separately because it runs on a different model from
+// extraction. Leaving these at Sonnet's 3/15 under-quoted the stage by a third
+// the moment the model split landed.
+const GEO_IN_PER_TOKEN = 4 / 1e6;
+const GEO_OUT_PER_TOKEN = 20 / 1e6;
 
 // Strings reaching the AI stage, per separator. Not every report yields a
 // distinct location, and GPS, gazetteer and landmark hits resolve before the
@@ -117,10 +124,17 @@ const est = {
   locations: Math.round(target.separators * AI_STRINGS_PER_SEPARATOR),
 };
 est.calls = Math.ceil((est.locations / 60) * GEO_CALLS_PER_BATCH);
-const geoIn = est.locations * GEO_IN_PER_STRING * IN_PER_TOKEN;
-const geoOut = est.locations * GEO_OUT_PER_STRING * OUT_PER_TOKEN;
+const geoIn = est.locations * GEO_IN_PER_STRING * GEO_IN_PER_TOKEN;
+const geoOut = est.locations * GEO_OUT_PER_STRING * GEO_OUT_PER_TOKEN;
 
-console.log(`MODEL ${MODEL} — $3/M input, $15/M output`);
+// Two stages, two models, two prices. Printing one as a banner read as though
+// the whole run were Sonnet — and the hardcoded "$3/M input, $15/M output"
+// string was the same trap that made measure-geocode.mjs report an Opus run at
+// Sonnet rates. Both lines derive their prices from the constants that do the
+// arithmetic, so a price can no longer be right in the maths and wrong on screen.
+const perM = (perToken) => `$${(perToken * 1e6).toFixed(0)}/M`;
+console.log(`EXTRACTION  ${MODEL} — ${perM(IN_PER_TOKEN)} in, ${perM(OUT_PER_TOKEN)} out`);
+console.log(`GEOCODING   ${GEOCODING_MODEL} — ${perM(GEO_IN_PER_TOKEN)} in, ${perM(GEO_OUT_PER_TOKEN)} out`);
 console.log(`system prompt ${systemTokens} tokens, resent on each of ${target.chunks} chunks`);
 console.log(`${target.separators} report separators found — output projected at ${EXTRACT_OUT_PER_SEPARATOR} tok each
 `);
@@ -135,4 +149,4 @@ const sysCost = systemTokens * target.chunks * IN_PER_TOKEN;
 console.log('\nLEVERS');
 console.log(`  prompt caching on the system prompt   saves ~${money(sysCost * 0.9)}  (it is ${money(sysCost)} of the bill)`);
 console.log(`  Batch API, 50% off, async             saves ~${money(total * 0.5)}`);
-console.log(`  output is ${((extractOut / total) * 100).toFixed(0)}% of the total — that is where the money goes`);
+console.log(`  output is ${(((extractOut + geoOut) / total) * 100).toFixed(0)}% of the total — that is where the money goes`);

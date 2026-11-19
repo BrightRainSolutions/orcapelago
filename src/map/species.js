@@ -18,22 +18,30 @@
 // Non-orca species take warmer, lighter tones so the two groups separate at a
 // glance even when "Other Species" is switched on.
 //
+// `icon` is the image the selected-sighting marker draws — see whale-icons.js
+// for why there are four of them and not nine. It lives here, beside the
+// colour, for the same reason the colour does: the marker and the legend are
+// two views of one row, and a species added to this table without an icon would
+// otherwise render as an empty patch of water.
+//
 // `color` is the fill, `ring` the outline — used for both the map marker's
 // stroke and the legend swatch's border, so the two cannot drift apart.
 //
 // NOTE: ReviewQueue's species <select> iterates the whole object on purpose.
 // An admin must be able to reclassify a sighting to ANY species, orca or not,
 // so never filter this map down to the orca subset for that control.
+import { ORCA_ICON, HUMPBACK_ICON, GRAY_ICON, OTHER_ICON } from './whale-icons.js';
+
 export const SPECIES = {
-  southern_resident:   { label: 'Southern Resident',   color: '#0044AA', ring: '#FFFFFF', orca: true },
-  northern_resident:   { label: 'Northern Resident',   color: '#5A6165', ring: '#FFFFFF', orca: true },
-  biggs:               { label: "Bigg's",              color: '#111111', ring: '#FFFFFF', orca: true },
-  unidentified_orca:   { label: 'Unidentified Orca',   color: '#FFFFFF', ring: '#111111', orca: true },
-  gray:                { label: 'Gray Whale',          color: '#9B7653', ring: '#FFFFFF' },
-  humpback:            { label: 'Humpback',            color: '#7A8B99', ring: '#FFFFFF' },
-  minke:               { label: 'Minke',               color: '#B0B7BB', ring: '#FFFFFF' },
-  unidentified_baleen: { label: 'Unidentified Baleen', color: '#FFFFFF', ring: '#9AA5AB' },
-  other:               { label: 'Other',               color: '#D8DEE1', ring: '#FFFFFF' }
+  southern_resident:   { label: 'Southern Resident',   color: '#0044AA', ring: '#FFFFFF', icon: ORCA_ICON,     orca: true },
+  northern_resident:   { label: 'Northern Resident',   color: '#5A6165', ring: '#FFFFFF', icon: ORCA_ICON,     orca: true },
+  biggs:               { label: "Bigg's",              color: '#111111', ring: '#FFFFFF', icon: ORCA_ICON,     orca: true },
+  unidentified_orca:   { label: 'Unidentified Orca',   color: '#FFFFFF', ring: '#111111', icon: ORCA_ICON,     orca: true },
+  gray:                { label: 'Gray Whale',          color: '#9B7653', ring: '#FFFFFF', icon: GRAY_ICON },
+  humpback:            { label: 'Humpback',            color: '#7A8B99', ring: '#FFFFFF', icon: HUMPBACK_ICON },
+  minke:               { label: 'Minke',               color: '#B0B7BB', ring: '#FFFFFF', icon: OTHER_ICON },
+  unidentified_baleen: { label: 'Unidentified Baleen', color: '#FFFFFF', ring: '#9AA5AB', icon: OTHER_ICON },
+  other:               { label: 'Other',               color: '#D8DEE1', ring: '#FFFFFF', icon: OTHER_ICON }
 };
 
 /** Clusters hold mixed species, so they can't honestly carry any one species

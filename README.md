@@ -4,6 +4,7 @@ A public PWA that maps whale sightings from [Orca Network](https://www.orcanetwo
 
 A Bright Rain Solutions portfolio project. Public and read-only for visitors; ingestion runs from the maintainer's machine. The data is historical by nature — the source is a digest published days-to-weeks after the fact.
 
+
 Full specification: [design/orcapelago-spec.md](design/orcapelago-spec.md)
 
 ## Stack
@@ -62,79 +63,18 @@ is deliberately kept out of Netlify so a deployed button could never spend
 money, and a real newsletter outlasts the 15-minute background-function ceiling
 anyway. `run-ingest.mjs` calls `lib/ingest.js` directly and has no such limit.
 
-1. **Save the text** to `docs/sightings-newsletters/YYYY-MM-DD-whale-sighting-report.txt`.
+**→ [docs/runbook.md](docs/runbook.md)** is the procedure: five steps, what to
+check at each, and what to do when one fails. Follow it rather than this file.
 
-   That directory is gitignored. The newsletters are Orca Network's editorial
-   work and this project does not redistribute them — it stores what it
-   derives from them, with attribution. Create the folder locally and paste
-   each issue in as you ingest it.
+In short: save the text to `docs/sightings-newsletters/YYYY-MM-DD-whale-sighting-report.txt`
+(gitignored — the newsletters are Orca Network's editorial work and this project
+stores only what it derives from them, with attribution), put the publication
+date alone on its own line at the top, dry-run it, price it, then ingest. The
+first three are free; only the last spends money or writes rows.
 
-2. **Put the publication date alone on its own line at the top** — `July 29, 2026`,
-   nothing else on that line, within the first 10 lines. Without it the ingest
-   aborts. Section headers (`Fri, Jul 10 - Puget Sound`) carry no year and
-   borrow it from this date.
-
-3. **Dry-run it.** Free — no API calls, no database, no `.env`:
-
-   ```
-   node scripts/dry-run.mjs docs/sightings-newsletters/2026-07-29-whale-sighting-report.txt
-   ```
-
-   It **exits non-zero** if the ingest would abort (no publication date, no
-   sections) *or* would appear to succeed while misfiling sightings. Confirm
-   the date parsed and that every species section you expect shows under
-   BANNERS RECOGNISED.
-
-   The misfiling case is the one to respect. An unrecognised ALL-CAPS banner
-   raises no error during ingest — its sightings are swallowed into the
-   *preceding* section and stored under the wrong species, so you get rows that
-   are present but wrong. Add new banners to `SPECIES_BANNERS` in
-   `lib/preprocess.js`. A genuinely new species also needs a key in
-   `SPECIES_KEYS` (`lib/extract.js`), the allowed list in `lib/prompts.js`, and
-   a label + colour in `src/map/species.js`.
-
-   The `detection_methods` vocabulary (`visual | hydrophone | webcam`) has the
-   same shape on a smaller scale: described in `lib/prompts.js`, enforced in
-   `DETECTION_METHODS` (`lib/extract.js`), badged in
-   `src/components/SightingPanel.vue`.
-
-   Ingest carries the same guard: unrecognised banners and any species the
-   model returns outside the vocabulary both land in the newsletter's
-   `error_message`, visible in the admin Notes column.
-
-4. **Ingest**:
-
-   ```
-   node scripts/run-ingest.mjs docs/sightings-newsletters/2026-07-29-whale-sighting-report.txt
-   ```
-
-   Each phase logs with elapsed time — per-chunk extraction progress, then
-   geocoding, then the insert. Expect minutes: the dry-run's chunk count is the
-   number of Claude calls, three of which run concurrently.
-
-   It refuses, before making any API call, if a newsletter with the same
-   publication date is already `complete` or `processing` — the latter is what
-   stops a second launch while one is still running. Every invocation mints a
-   fresh UUID, so without that guard a re-run silently creates a duplicate
-   newsletter and several hundred duplicate sightings. Pass `--force` only when
-   you genuinely intend a second copy.
-
-5. **Resolve locations** at `/admin`:
-   - **Catalog first.** Pending candidates are ordered by `hit_count`, and each
-     Promote backfills every flagged sighting sharing that raw text — it drains
-     the review queue underneath you.
-   - **Review queue second**, for what remains. Click-placing on the mini-map
-     sets `geo_method='manual'`.
-
-Sightings are inserted only after extraction *and* geocoding both finish, so a
-failed or hung run leaves nothing half-written:
-
-```sql
-delete from newsletters where status in ('failed', 'processing');
-```
-
-That cascades to any sightings the run did write. Don't run it while an ingest
-is genuinely in flight.
+Why the pipeline is shaped the way it is — the banner/species coupling, the
+geocoding chain, the trust model — is in
+[docs/architecture.md](docs/architecture.md).
 
 ## Landmarks (GNIS reference layer)
 

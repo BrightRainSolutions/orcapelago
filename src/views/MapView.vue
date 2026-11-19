@@ -37,6 +37,7 @@ import { useRoute } from 'vue-router';
 import maplibregl from 'maplibre-gl';
 import { buildBasemapStyle, SALISH_SEA_CENTER, DEFAULT_ZOOM } from '../map/basemap.js';
 import { SPECIES, ORCA_KEYS, CLUSTER_COLOR, speciesExpr } from '../map/species.js';
+import { addWhaleIcons, OTHER_ICON } from '../map/whale-icons.js';
 import { HYDROPHONES, hydrophoneElement } from '../map/hydrophones.js';
 import { WEBCAMS, webcamElement } from '../map/webcams.js';
 import { fetchLandmarks } from '../api/landmarks.js';
@@ -117,11 +118,11 @@ const selectedFeature = computed(() =>
     : null
 );
 
-watch(selectedFeature, (feature) => {
+function drawSelection(feature) {
   map?.getSource('selected-sighting')?.setData(
     feature ? { type: 'FeatureCollection', features: [feature] } : EMPTY_FC
   );
-  // Hide the plain circle underneath so the orca replaces it rather than
+  // Hide the plain circle underneath so the whale replaces it rather than
   // sitting on top of it.
   if (map?.getLayer('sighting-points')) {
     map.setFilter('sighting-points', [
@@ -130,7 +131,9 @@ watch(selectedFeature, (feature) => {
       ['!=', ['get', 'id'], feature?.properties.id ?? '']
     ]);
   }
-});
+}
+
+watch(selectedFeature, drawSelection);
 
 function showAllDates() {
   filters.from = archive.from;
@@ -143,10 +146,15 @@ const fillExpr = speciesExpr('color', SPECIES.other.color);
 const ringExpr = speciesExpr('ring', SPECIES.other.ring);
 
 /**
- * The selected sighting, rendered as a spyhopping orca.
+ * The selected sighting, drawn as the animal it is.
  *
  * The detail panel is fixed to a corner, so unlike the popup it replaced there
  * is nothing tying it to a spot on the water. This is that tie.
+ *
+ * The icon comes off SPECIES, so clicking a Humpback no longer raises a
+ * spyhopping orca out of Commencement Bay. Every icon shares a waterline (see
+ * whale-icons.js), which is what lets one layer swap between them without the
+ * marker jumping as the selection moves.
  *
  * Its own source, deliberately, rather than a filter on the sightings layer:
  * that source clusters, so a selected sighting inside a cluster would not
@@ -157,20 +165,14 @@ const ringExpr = speciesExpr('ring', SPECIES.other.ring);
  * to a landmark label.
  */
 async function addSelectedLayer() {
-  try {
-    const img = await map.loadImage('/orca-spy.png');
-    if (!map.hasImage('orca-spy')) map.addImage('orca-spy', img.data);
-  } catch (err) {
-    console.warn('[orcapelago] orca-spy icon unavailable:', err.message);
-    return;
-  }
+  await addWhaleIcons(map);
   map.addSource('selected-sighting', { type: 'geojson', data: EMPTY_FC });
   map.addLayer({
     id: 'selected-sighting',
     type: 'symbol',
     source: 'selected-sighting',
     layout: {
-      'icon-image': 'orca-spy',
+      'icon-image': speciesExpr('icon', OTHER_ICON),
       'icon-size': ['interpolate', ['linear'], ['zoom'], 7, 0.26, 13, 0.4],
       // 'center', not 'bottom': bottom puts the whole 100px image above the
       // coordinate, so the orca floated well north of the sighting it marks.
@@ -179,6 +181,11 @@ async function addSelectedLayer() {
       'icon-ignore-placement': true
     }
   });
+  // This layer is built behind an await, so a deep link whose data arrived
+  // first has already fired the watcher against a source that did not exist
+  // yet — the panel opened and the water stayed empty. Draw what is selected
+  // now rather than waiting for the next change.
+  drawSelection(selectedFeature.value);
 }
 
 function addSightingLayers() {
@@ -384,7 +391,7 @@ onMounted(async () => {
     // Order is z-order: landmarks first so sighting markers always sit above.
     addLandmarkLayers(map, landmarks);
     addSightingLayers();
-    addSelectedLayer();   // after, so the orca draws above the circles
+    addSelectedLayer();   // after, so the whale draws above the circles
     applyData();
     focusQuerySighting();
   });
